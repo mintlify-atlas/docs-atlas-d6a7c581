@@ -1,0 +1,275 @@
+---
+title: "FFmpegHandler"
+description: "Audio and video conversion handler using FFmpeg WASM"
+---
+
+## Overview
+
+The `FFmpegHandler` provides audio and video conversion capabilities using FFmpeg compiled to WebAssembly. It automatically discovers supported formats at initialization and handles complex video encoding scenarios with automatic error recovery.
+
+## Supported Formats
+
+FFmpegHandler dynamically discovers formats at initialization by querying FFmpeg's available muxers and demuxers. Common supported formats include:
+
+### Video Formats
+- **MP4** - MPEG-4 Video
+- **WebM** - Matroska / WebM
+- **MOV** - QuickTime / MOV
+- **GIF** - Graphics Interchange Format
+- **APNG** - Animated PNG
+- **3GP** - 3GPP Multimedia Container
+- **3G2** - 3GPP2 Multimedia Container
+- **Bink Video** (.bik) - Read-only
+
+### Audio Formats
+- **MP3** - MPEG Audio Layer III
+- **M4A** - MPEG-4 Audio
+- **WAV** - Waveform Audio File Format
+- **FLAC** - Free Lossless Audio Codec
+- **OGG** - Ogg Vorbis
+
+The handler filters out subtitle formats, piped formats, and manifest files. Lossless formats include PNG, BMP, and TIFF.
+
+## Initialization
+
+The handler loads FFmpeg from `/convert/wasm/ffmpeg-core.js` and queries available formats:
+
+```typescript
+const handler = new FFmpegHandler();
+await handler.init();
+// Handler discovers all supported formats automatically
+```
+
+### Format Discovery Process
+
+1. Loads FFmpeg WASM module
+2. Executes `ffmpeg -formats` to list all muxers/demuxers
+3. For each format, queries muxer details to get extension and MIME type
+4. Categorizes formats as audio, video, or image
+5. Applies manual fine-tuning and filtering
+6. Prioritizes common formats (WebM, MP4, GIF, WAV)
+
+### Manual Format Adjustments
+
+The handler applies several manual adjustments after format discovery:
+
+```typescript
+// Removed formats (not supported in WASM or cause issues)
+- AV1/AVIF - Not included in WASM FFmpeg
+- HEVC - Stalls during conversion
+- RTSP - Stalls during conversion
+
+// Added formats
+- QuickTime Audio (.qta) - Uses MOV demuxer
+- PNG input - Explicitly added alongside APNG
+- Bink Video (.bik) - Normalized metadata for extension detection
+```
+
+## Conversion Process
+
+### Basic Conversion
+
+```typescript
+const outputFiles = await handler.doConvert(
+  inputFiles,
+  inputFormat,
+  outputFormat
+);
+```
+
+### Image Sequence to Video
+
+When converting image sequences (PNG/JPEG) to video, the handler automatically determines frame rate:
+
+```typescript
+// Less than 30 images: 1 FPS
+// 30+ images: 30 FPS
+let forceFPS = 0;
+if (inputFormat.mime === "image/png" || inputFormat.mime === "image/jpeg") {
+  forceFPS = inputFiles.length < 30 ? 1 : 30;
+}
+```
+
+### MP4 Output
+
+For MP4 output, the handler automatically sets the pixel format for maximum compatibility:
+
+```typescript
+if (outputFormat.mime === "video/mp4") {
+  command.push("-pix_fmt", "yuv420p");
+}
+```
+
+### Special Format Handling
+
+<ParamField path="DVD Format" type="target format">
+  Applies NTSC-DVD target with SAR correction:
+  ```typescript
+  command.push("-vf", "setsar=1", "-target", "ntsc-dvd", "-pix_fmt", "rgb24");
+  ```
+</ParamField>
+
+<ParamField path="VCD Format" type="target format">
+  Scales to 352x288 for PAL-VCD:
+  ```typescript
+  command.push("-vf", "scale=352:288,setsar=1", "-target", "pal-vcd", "-pix_fmt", "rgb24");
+  ```
+</ParamField>
+
+## Error Recovery
+
+FFmpegHandler includes sophisticated error recovery for common conversion failures:
+
+### Automatic Padding
+
+If dimensions aren't divisible by the codec's requirements:
+
+```typescript
+if (stdout.includes(" not divisible by")) {
+  const division = stdout.split(" not divisible by ")[1].split(" ")[0];
+  return this.doConvert(inputFiles, inputFormat, outputFormat, 
+    [...oldArgs, "-vf", `pad=ceil(iw/${division})*${division}:ceil(ih/${division})*${division}`]
+  );
+}
+```
+
+### Sample Rate Adjustment
+
+If the output format doesn't support the input sample rate:
+
+```typescript
+if (stdout.includes("does not support that sample rate")) {
+  const acceptedBitrate = stdout.split("choose from (")[1].split(", ")[0];
+  return this.doConvert(inputFiles, inputFormat, outputFormat, 
+    [...oldArgs, "-ar", acceptedBitrate]
+  );
+}
+```
+
+### Resolution Constraints
+
+If specific resolutions are required:
+
+```typescript
+if (stdout.includes("Valid sizes are")) {
+  const newSize = stdout.split("Valid sizes are ")[1].split(".")[0].split(" ").pop();
+  return this.doConvert(inputFiles, inputFormat, outputFormat, 
+    [...oldArgs, "-s", newSize]
+  );
+}
+```
+
+## Safe Execution
+
+The handler includes a `execSafe` wrapper to handle FFmpeg crashes:
+
+<ParamField path="args" type="string[]" required>
+  CLI arguments for FFmpeg
+</ParamField>
+
+<ParamField path="timeout" type="number" default="-1">
+  Max execution time in milliseconds. `-1` for no timeout.
+</ParamField>
+
+<ParamField path="attempts" type="number" default="1">
+  Number of retry attempts on "index out of bounds" errors
+</ParamField>
+
+```typescript
+await handler.execSafe(
+  ["-i", "input.mp4", "-f", "webm", "output.webm"],
+  30000,  // 30 second timeout
+  3       // 3 retry attempts
+);
+```
+
+### Crash Recovery
+
+When FFmpeg crashes with "index out of bounds" (typically memory issues):
+
+1. Terminates the FFmpeg instance
+2. Reloads FFmpeg from scratch
+3. Retries the conversion
+4. Repeats up to `attempts` times
+
+## File Management
+
+FFmpegHandler uses FFmpeg's virtual file system:
+
+```typescript
+// Write input files
+for (const file of inputFiles) {
+  const entryName = `file_${fileIndex++}.${inputFormat.extension}`;
+  await this.#ffmpeg.writeFile(entryName, new Uint8Array(file.bytes));
+}
+
+// Create concat list for multiple files
+await this.#ffmpeg.writeFile("list.txt", new TextEncoder().encode(listString));
+
+// Execute conversion
+await this.#ffmpeg.exec(command);
+
+// Read output
+const fileData = await this.#ffmpeg.readFile("output");
+
+// Cleanup
+await this.#ffmpeg.deleteFile("output");
+```
+
+## Format Categories
+
+FFmpegHandler categorizes formats based on MIME type and description:
+
+- **Audio**: PCM codecs, formats with "audio" in description
+- **Video**: Non-audio, non-image formats
+- **Image**: APNG, PNG, BMP, TIFF
+
+## Implementation Details
+
+### Format Naming
+
+Common formats use custom names from the `formatNames` map:
+
+```typescript
+static formatNames: Map<string, string> = new Map([
+  ["mp4", "MPEG-4 Video"],
+  ["m4a", "MPEG-4 Audio"],
+  ["flac", "Free Lossless Audio Codec"],
+  ["wav", "Waveform Audio File Format"],
+  ["mp3", "MPEG Audio Layer III"],
+  ["ogg", "Ogg Vorbis"],
+  ["matroska", "Matroska / WebM"],
+  ["mov", "QuickTime / MOV"],
+  ["3gp", "3GPP Multimedia Container"],
+  ["3g2", "3GPP2 Multimedia Container"]
+]);
+```
+
+### stdout Logging
+
+The handler provides methods to capture FFmpeg's stdout:
+
+```typescript
+const stdout = await handler.getStdout(async () => {
+  await handler.execSafe(["-formats"]);
+});
+// stdout contains FFmpeg's output
+```
+
+## Properties
+
+<ParamField path="name" type="string" default="FFmpeg">
+  Handler identifier
+</ParamField>
+
+<ParamField path="supportedFormats" type="FileFormat[]">
+  Dynamically populated array of supported formats during initialization
+</ParamField>
+
+<ParamField path="ready" type="boolean">
+  `true` when initialization is complete and handler is ready for conversions
+</ParamField>
+
+## Source Reference
+
+Implementation: `~/workspace/source/src/handlers/FFmpeg.ts`

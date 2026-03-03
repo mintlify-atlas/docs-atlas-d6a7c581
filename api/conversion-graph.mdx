@@ -1,0 +1,413 @@
+---
+title: 'TraversionGraph'
+description: 'Pathfinding algorithm for multi-step file conversions'
+icon: 'diagram-project'
+---
+
+The `TraversionGraph` class implements a Dijkstra-based pathfinding algorithm to find optimal conversion paths between file formats, even when multi-step conversions are required.
+
+## Overview
+
+The graph models file formats as nodes and possible conversions as weighted edges. The algorithm finds the lowest-cost path from a source format to a target format, considering:
+
+- **Depth cost**: Base cost for each conversion step
+- **Category change cost**: Additional cost when converting between format categories (e.g., image to video)
+- **Lossiness penalty**: Cost multiplier for lossy conversions (1.4x)
+- **Handler priority**: Small cost based on handler registration order
+- **Format priority**: Small cost based on format order within a handler
+- **Adaptive costs**: Dynamic penalties for specific category sequences
+
+## Class Definition
+
+```typescript
+export class TraversionGraph {
+  private handlers: FormatHandler[] = [];
+  private nodes: Node[] = [];
+  private edges: Edge[] = [];
+  private categoryChangeCosts: CategoryChangeCost[] = [...];
+  private categoryAdaptiveCosts: CategoryAdaptiveCost[] = [...];
+  private temporaryDeadEnds: ConvertPathNode[][] = [];
+}
+```
+
+## Core Types
+
+### Node
+
+```typescript
+export interface Node {
+  identifier: string;
+  edges: Array<number>;
+}
+```
+
+<ParamField path="identifier" type="string" required>
+  Unique identifier for the format node, formatted as `mime(format)`.
+  
+  Example: `"image/png(png)"`, `"video/mp4(mp4)"`
+</ParamField>
+
+<ParamField path="edges" type="number[]" required>
+  Array of edge indices that originate from this node.
+</ParamField>
+
+### Edge
+
+```typescript
+export interface Edge {
+  from: {format: FileFormat, index: number};
+  to: {format: FileFormat, index: number};
+  handler: string;
+  cost: number;
+}
+```
+
+<ParamField path="from" type="{format: FileFormat, index: number}" required>
+  Source format and its node index.
+</ParamField>
+
+<ParamField path="to" type="{format: FileFormat, index: number}" required>
+  Destination format and its node index.
+</ParamField>
+
+<ParamField path="handler" type="string" required>
+  Name of the handler that performs this conversion.
+</ParamField>
+
+<ParamField path="cost" type="number" required>
+  Calculated cost for this conversion edge.
+</ParamField>
+
+### CategoryChangeCost
+
+```typescript
+interface CategoryChangeCost {
+  from: string;
+  to: string;
+  handler?: string;
+  cost: number;
+}
+```
+
+<ParamField path="from" type="string" required>
+  Source category name.
+</ParamField>
+
+<ParamField path="to" type="string" required>
+  Destination category name.
+</ParamField>
+
+<ParamField path="handler" type="string">
+  Optional handler name to specify that this cost only applies when using a specific handler for the category change. If not specified, the cost applies to all handlers.
+</ParamField>
+
+<ParamField path="cost" type="number" required>
+  Additional cost to apply for this category change.
+</ParamField>
+
+### CategoryAdaptiveCost
+
+```typescript
+interface CategoryAdaptiveCost {
+  categories: string[];
+  cost: number;
+}
+```
+
+<ParamField path="categories" type="string[]" required>
+  List of sequential categories.
+</ParamField>
+
+<ParamField path="cost" type="number" required>
+  Cost to apply when a conversion involves all of the specified categories in sequence.
+</ParamField>
+
+## Methods
+
+### Graph Initialization
+
+<ResponseField name="init" type="(supportedFormatCache: Map<string, FileFormat[]>, handlers: FormatHandler[], strictCategories?: boolean) => void">
+  Initializes the traversion graph based on supported formats and handlers.
+  
+  This should be called after all handlers have been registered and their supported formats have been cached. The graph is built by creating nodes for each unique file format and edges for each possible conversion.
+  
+  <Expandable title="Parameters">
+    <ParamField path="supportedFormatCache" type="Map<string, FileFormat[]>" required>
+      Map of handler names to their supported formats.
+    </ParamField>
+    
+    <ParamField path="handlers" type="FormatHandler[]" required>
+      Array of registered format handlers.
+    </ParamField>
+    
+    <ParamField path="strictCategories" type="boolean" default={false}>
+      If `true`, the algorithm will apply category change costs more strictly, even when formats share categories. This can lead to more accurate pathfinding at the cost of potentially longer paths and increased search time.
+      
+      If `false`, category change costs will only be applied when formats do not share any categories, allowing for more flexible pathfinding that may yield shorter paths but with less nuanced cost calculations.
+    </ParamField>
+  </Expandable>
+  
+  **Example:**
+  ```typescript
+  const graph = new TraversionGraph();
+  const formatCache = new Map<string, FileFormat[]>();
+  
+  // Populate format cache from handlers
+  for (const handler of handlers) {
+    await handler.init();
+    if (handler.supportedFormats) {
+      formatCache.set(handler.name, handler.supportedFormats);
+    }
+  }
+  
+  graph.init(formatCache, handlers, false);
+  ```
+</ResponseField>
+
+### Pathfinding
+
+<ResponseField name="searchPath" type="(from: ConvertPathNode, to: ConvertPathNode, simpleMode: boolean) => AsyncGenerator<ConvertPathNode[]>">
+  Searches for conversion paths from source to target format using Dijkstra's algorithm.
+  
+  Returns an async generator that yields paths as they are found, ordered by cost (lowest cost first).
+  
+  <Expandable title="Parameters">
+    <ParamField path="from" type="ConvertPathNode" required>
+      Source conversion node containing the starting format and handler.
+    </ParamField>
+    
+    <ParamField path="to" type="ConvertPathNode" required>
+      Target conversion node containing the destination format and handler.
+    </ParamField>
+    
+    <ParamField path="simpleMode" type="boolean" required>
+      If `true`, accepts any path that reaches the target format, regardless of which handler is used for the final step.
+      
+      If `false`, only accepts paths where the final handler matches the target node's handler.
+    </ParamField>
+  </Expandable>
+  
+  **Example:**
+  ```typescript
+  const fromNode = new ConvertPathNode(imageHandler, pngFormat);
+  const toNode = new ConvertPathNode(videoHandler, mp4Format);
+  
+  for await (const path of graph.searchPath(fromNode, toNode, true)) {
+    console.log("Found path:", path.map(p => `${p.handler.name}(${p.format.mime})`));
+    // Use the first (lowest cost) path
+    break;
+  }
+  ```
+</ResponseField>
+
+### Category Cost Management
+
+<ResponseField name="addCategoryChangeCost" type="(from: string, to: string, cost: number, handler?: string, updateIfExists?: boolean) => boolean">
+  Adds a category change cost rule.
+  
+  <Expandable title="Parameters">
+    <ParamField path="from" type="string" required>
+      Source category.
+    </ParamField>
+    
+    <ParamField path="to" type="string" required>
+      Destination category.
+    </ParamField>
+    
+    <ParamField path="cost" type="number" required>
+      Cost to apply.
+    </ParamField>
+    
+    <ParamField path="handler" type="string">
+      Optional handler name to limit this cost to a specific handler.
+    </ParamField>
+    
+    <ParamField path="updateIfExists" type="boolean" default={true}>
+      If `true`, updates the cost if it already exists. If `false`, returns `false` without updating.
+    </ParamField>
+  </Expandable>
+  
+  Returns `true` if the cost was added or updated, `false` otherwise.
+</ResponseField>
+
+<ResponseField name="removeCategoryChangeCost" type="(from: string, to: string, handler?: string) => boolean">
+  Removes a category change cost rule.
+  
+  Returns `true` if a cost was removed, `false` otherwise.
+</ResponseField>
+
+<ResponseField name="updateCategoryChangeCost" type="(from: string, to: string, cost: number, handler?: string) => void">
+  Updates an existing category change cost or adds it if it doesn't exist.
+</ResponseField>
+
+<ResponseField name="hasCategoryChangeCost" type="(from: string, to: string, handler?: string) => boolean">
+  Checks if a category change cost exists.
+</ResponseField>
+
+<ResponseField name="addCategoryAdaptiveCost" type="(categories: string[], cost: number, updateIfExists?: boolean) => boolean">
+  Adds a category adaptive cost rule for sequential category conversions.
+  
+  <Expandable title="Parameters">
+    <ParamField path="categories" type="string[]" required>
+      Sequential list of categories.
+    </ParamField>
+    
+    <ParamField path="cost" type="number" required>
+      Cost to apply when all categories appear in sequence.
+    </ParamField>
+    
+    <ParamField path="updateIfExists" type="boolean" default={true}>
+      If `true`, updates the cost if it already exists.
+    </ParamField>
+  </Expandable>
+  
+  Returns `true` if the cost was added or updated, `false` otherwise.
+</ResponseField>
+
+<ResponseField name="removeCategoryAdaptiveCost" type="(categories: string[]) => boolean">
+  Removes a category adaptive cost rule.
+</ResponseField>
+
+<ResponseField name="updateCategoryAdaptiveCost" type="(categories: string[], cost: number) => void">
+  Updates an existing category adaptive cost or adds it if it doesn't exist.
+</ResponseField>
+
+<ResponseField name="hasCategoryAdaptiveCost" type="(categories: string[]) => boolean">
+  Checks if a category adaptive cost exists.
+</ResponseField>
+
+### Dead End Path Management
+
+<ResponseField name="addDeadEndPath" type="(pathFragment: ConvertPathNode[]) => void">
+  Adds a path fragment to the temporary dead ends list.
+  
+  Paths that start with this fragment will be assigned infinite cost during pathfinding, effectively blocking them.
+</ResponseField>
+
+<ResponseField name="clearDeadEndPaths" type="() => void">
+  Clears all temporary dead end paths.
+</ResponseField>
+
+### Data Access
+
+<ResponseField name="getData" type="() => {nodes: Node[], edges: Edge[], categoryChangeCosts: CategoryChangeCost[], categoryAdaptiveCosts: CategoryAdaptiveCost[]}">
+  Returns a deep copy of the graph data, including nodes, edges, category change costs, and category adaptive costs.
+  
+  This can be used for debugging, visualization, or analysis purposes. The returned data is a deep copy to prevent external modifications from affecting the internal state.
+</ResponseField>
+
+### Event Handling
+
+<ResponseField name="addPathEventListener" type="(listener: (state: string, path: ConvertPathNode[]) => void) => void">
+  Adds an event listener for pathfinding events.
+  
+  The listener receives:
+  - `state`: One of `"searching"`, `"found"`, or `"skipped"`
+  - `path`: The current path being processed
+  
+  **Example:**
+  ```typescript
+  graph.addPathEventListener((state, path) => {
+    if (state === "found") {
+      console.log("Path found:", path.length, "steps");
+    }
+  });
+  ```
+</ResponseField>
+
+## Algorithm Parameters
+
+The pathfinding algorithm uses the following tunable constants:
+
+```typescript
+const DEPTH_COST = 1; // Base cost for each conversion step
+const DEFAULT_CATEGORY_CHANGE_COST = 0.6; // Default cost for unspecified category changes
+const LOSSY_COST_MULTIPLIER = 1.4; // Cost multiplier for lossy conversions
+const HANDLER_PRIORITY_COST = 0.02; // Cost per handler priority index
+const FORMAT_PRIORITY_COST = 0.05; // Cost per format priority index
+```
+
+## Default Category Costs
+
+The graph includes predefined category change costs:
+
+<CodeGroup>
+```typescript Category Changes
+{from: "image", to: "video", cost: 0.2},       // Almost lossless
+{from: "video", to: "image", cost: 0.4},       // Potentially lossy
+{from: "image", to: "audio", handler: "ffmpeg", cost: 100}, // FFmpeg can't do this
+{from: "audio", to: "image", handler: "ffmpeg", cost: 100},
+{from: "text", to: "audio", handler: "ffmpeg", cost: 100},
+{from: "audio", to: "text", handler: "ffmpeg", cost: 100},
+{from: "image", to: "audio", cost: 1.4},       // Extremely lossy
+{from: "audio", to: "image", cost: 1},         // Very lossy
+{from: "video", to: "audio", cost: 1.4},       // Might be lossy
+{from: "audio", to: "video", cost: 1},
+{from: "text", to: "image", cost: 0.5},
+{from: "image", to: "text", cost: 0.5},
+{from: "text", to: "audio", cost: 0.6},
+{from: "document", to: "text", cost: 1},       // Loses rich formatting
+```
+
+```typescript Adaptive Costs
+{ categories: ["text", "image", "audio"], cost: 15 },
+{ categories: ["image", "video", "audio"], cost: 10000 },
+{ categories: ["audio", "video", "image"], cost: 10000 },
+```
+</CodeGroup>
+
+## Usage Example
+
+```typescript
+import { TraversionGraph, ConvertPathNode } from "./TraversionGraph";
+import type { FormatHandler } from "./FormatHandler";
+
+// Initialize handlers
+const handlers: FormatHandler[] = [
+  new ImageMagickHandler(),
+  new FFmpegHandler(),
+  new PandocHandler()
+];
+
+for (const handler of handlers) {
+  await handler.init();
+}
+
+// Build format cache
+const formatCache = new Map<string, FileFormat[]>();
+for (const handler of handlers) {
+  if (handler.supportedFormats) {
+    formatCache.set(handler.name, handler.supportedFormats);
+  }
+}
+
+// Initialize graph
+const graph = new TraversionGraph();
+graph.init(formatCache, handlers, false);
+
+// Add custom category costs
+graph.addCategoryChangeCost("custom", "image", 0.3);
+
+// Find conversion path
+const pngFormat = handlers[0].supportedFormats?.find(f => f.format === "png")!;
+const mp4Format = handlers[1].supportedFormats?.find(f => f.format === "mp4")!;
+
+const fromNode = new ConvertPathNode(handlers[0], pngFormat);
+const toNode = new ConvertPathNode(handlers[1], mp4Format);
+
+// Get the best path
+for await (const path of graph.searchPath(fromNode, toNode, true)) {
+  console.log("Conversion path:");
+  for (const step of path) {
+    console.log(`  ${step.handler.name}: ${step.format.mime}`);
+  }
+  
+  // Use the first (lowest cost) path
+  break;
+}
+```
+
+## See Also
+
+- [FormatHandler](/api/format-handler) - Handler interface used by the graph
+- [FileFormat](/api/file-format) - Format definitions used in nodes and edges

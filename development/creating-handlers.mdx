@@ -1,0 +1,412 @@
+---
+title: Creating Format Handlers
+description: Step-by-step guide to creating format handlers for Convert to it!
+---
+
+This guide will walk you through creating a new format handler to add support for file formats in Convert to it!.
+
+## Handler Basics
+
+Each conversion tool in Convert to it! is wrapped in a handler that implements the `FormatHandler` interface. This creates a standardized way to support different conversion libraries and tools.
+
+## Step-by-Step Guide
+
+<Steps>
+  <Step title="Create the handler file">
+    Create a new TypeScript file in `src/handlers/` following the naming convention:
+    
+    - If your tool is called `dummy`, the class should be called `dummyHandler`
+    - The file should be called `dummy.ts`
+    
+    ```typescript
+    // src/handlers/dummy.ts
+    import type { FileData, FileFormat, FormatHandler } from "../FormatHandler.ts";
+    import CommonFormats from "src/CommonFormats.ts";
+
+    class dummyHandler implements FormatHandler {
+      // Implementation goes here
+    }
+
+    export default dummyHandler;
+    ```
+  </Step>
+  
+  <Step title="Implement required properties">
+    Add the required properties from the `FormatHandler` interface:
+    
+    ```typescript
+    class dummyHandler implements FormatHandler {
+      public name: string = "dummy";
+      public supportedFormats?: FileFormat[];
+      public ready: boolean = false;
+      
+      // Methods will be added next
+    }
+    ```
+  </Step>
+  
+  <Step title="Implement the init() method">
+    The `init()` method initializes your handler and sets up supported formats:
+    
+    ```typescript
+    async init() {
+      this.supportedFormats = [
+        // Define supported formats here
+      ];
+      this.ready = true;
+    }
+    ```
+  </Step>
+  
+  <Step title="Implement the doConvert() method">
+    The `doConvert()` method performs the actual conversion:
+    
+    ```typescript
+    async doConvert(
+      inputFiles: FileData[],
+      inputFormat: FileFormat,
+      outputFormat: FileFormat
+    ): Promise<FileData[]> {
+      const outputFiles: FileData[] = [];
+      
+      // Conversion logic goes here
+      
+      return outputFiles;
+    }
+    ```
+  </Step>
+  
+  <Step title="Register the handler">
+    Add your handler to `src/handlers/index.ts`:
+    
+    ```typescript
+    import dummyHandler from "./dummy.ts";
+    
+    const handlers: FormatHandler[] = [];
+    // ... existing handlers
+    try { handlers.push(new dummyHandler()) } catch (_) { };
+    ```
+  </Step>
+</Steps>
+
+## Defining Supported Formats
+
+You can define formats in two ways:
+
+### Using CommonFormats (Recommended)
+
+Use the builder pattern with predefined format definitions:
+
+```typescript
+this.supportedFormats = [
+  CommonFormats.PNG.builder("png")
+    .allowFrom(true)   // Can convert FROM PNG
+    .allowTo(true)     // Can convert TO PNG
+    .markLossless(),   // PNG is lossless
+    
+  CommonFormats.JPEG.builder("jpeg")
+    .allowFrom(true)
+    .allowTo(true)
+    // JPEG is lossy by default
+];
+```
+
+<Note>
+The string parameter in `.builder("png")` is the internal identifier used by your handler. It can match the format name or be something custom.
+</Note>
+
+### Custom Format Definitions
+
+For formats not in CommonFormats, define them manually:
+
+```typescript
+this.supportedFormats = [
+  {
+    name: "CompuServe Graphics Interchange Format (GIF)",
+    format: "gif",
+    extension: "gif",
+    mime: "image/gif",
+    from: true,
+    to: false,
+    internal: "gif",
+    category: ["image", "video"],
+    lossless: false
+  }
+];
+```
+
+<AccordionGroup>
+  <Accordion title="Format Properties Explained">
+    - `name`: Full descriptive name shown to users
+    - `format`: Short identifier for differentiation
+    - `extension`: File extension without the dot
+    - `mime`: MIME type (run through `normalizeMimeType` if matching)
+    - `from`: Whether this handler can read this format
+    - `to`: Whether this handler can write this format
+    - `internal`: Handler's internal identifier for this format
+    - `category`: Media category (or array of categories)
+    - `lossless`: Whether conversion preserves all data
+  </Accordion>
+</AccordionGroup>
+
+## Real Example: canvasToBlobHandler
+
+Here's a simplified real handler that converts images using HTML5 Canvas:
+
+```typescript src/handlers/canvasToBlob.ts
+import CommonFormats from "src/CommonFormats.ts";
+import type { FileData, FileFormat, FormatHandler } from "../FormatHandler.ts";
+
+class canvasToBlobHandler implements FormatHandler {
+  public name: string = "canvasToBlob";
+
+  public supportedFormats: FileFormat[] = [
+    CommonFormats.PNG.supported("png", true, true, true),
+    CommonFormats.JPEG.supported("jpeg", true, true),
+    CommonFormats.WEBP.supported("webp", true, true),
+    CommonFormats.GIF.supported("gif", true, false),
+    CommonFormats.SVG.supported("svg", true, false),
+  ];
+
+  #canvas?: HTMLCanvasElement;
+  #ctx?: CanvasRenderingContext2D;
+
+  public ready: boolean = false;
+
+  async init() {
+    this.#canvas = document.createElement("canvas");
+    this.#ctx = this.#canvas.getContext("2d") || undefined;
+    this.ready = true;
+  }
+
+  async doConvert(
+    inputFiles: FileData[],
+    inputFormat: FileFormat,
+    outputFormat: FileFormat
+  ): Promise<FileData[]> {
+    if (!this.#canvas || !this.#ctx) {
+      throw "Handler not initialized.";
+    }
+
+    const outputFiles: FileData[] = [];
+    
+    for (const inputFile of inputFiles) {
+      // Create blob from bytes
+      const blob = new Blob([inputFile.bytes], { type: inputFormat.mime });
+      const url = URL.createObjectURL(blob);
+
+      // Load image
+      const image = new Image();
+      await new Promise((resolve, reject) => {
+        image.addEventListener("load", resolve);
+        image.addEventListener("error", reject);
+        image.src = url;
+      });
+
+      // Draw to canvas
+      this.#canvas.width = image.naturalWidth;
+      this.#canvas.height = image.naturalHeight;
+      this.#ctx.drawImage(image, 0, 0);
+
+      // Convert to output format
+      const bytes = await new Promise<Uint8Array>((resolve, reject) => {
+        this.#canvas!.toBlob((blob) => {
+          if (!blob) return reject("Canvas output failed");
+          blob.arrayBuffer().then(buf => resolve(new Uint8Array(buf)));
+        }, outputFormat.mime);
+      });
+
+      // Set output filename
+      const name = inputFile.name.split(".")[0] + "." + outputFormat.extension;
+
+      outputFiles.push({ bytes, name });
+    }
+
+    return outputFiles;
+  }
+}
+
+export default canvasToBlobHandler;
+```
+
+## Important Guidelines
+
+<Warning>
+### File Naming Responsibility
+The handler is responsible for setting the output file's name. This allows flexibility for cases where the full filename matters.
+
+In most cases, you'll swap the file extension:
+```typescript
+const name = inputFile.name.split(".")[0] + "." + outputFormat.extension;
+```
+</Warning>
+
+<Warning>
+### Buffer Mutation Protection
+Handlers must ensure byte buffers entering or exiting do not get mutated:
+
+```typescript
+// Clone buffer if necessary
+const safeBytes = new Uint8Array(inputFile.bytes);
+```
+</Warning>
+
+### MIME Type Normalization
+
+When handling MIME types, run them through `normalizeMimeType` first:
+
+```typescript
+import normalizeMimeType from "../normalizeMimeType.ts";
+
+const normalizedMime = normalizeMimeType(detectedMimeType);
+```
+
+<Note>
+One file can have multiple valid MIME types, which isn't great when matching algorithmically. Normalization ensures consistency.
+</Note>
+
+### Format Representation
+
+<Warning>
+When implementing a new file format, treat the file as the **media that it represents**, not the data that it contains.
+
+**Example:** An SVG handler should treat files as **images**, not as XML data.
+</Warning>
+
+## Advanced Example: FFmpeg Handler
+
+For a more complex example, see the FFmpeg handler which:
+
+- Dynamically discovers supported formats at initialization
+- Handles WebAssembly-based FFmpeg
+- Implements error recovery and retries
+- Supports multiple input files
+
+```typescript src/handlers/FFmpeg.ts (excerpt)
+class FFmpegHandler implements FormatHandler {
+  public name: string = "FFmpeg";
+  public supportedFormats: FileFormat[] = [];
+  public ready: boolean = false;
+
+  #ffmpeg?: FFmpeg;
+
+  async init() {
+    this.#ffmpeg = new FFmpeg();
+    await this.#ffmpeg.load({
+      coreURL: "/convert/wasm/ffmpeg-core.js"
+    });
+
+    // Dynamically discover formats
+    const stdout = await this.getStdout(async () => {
+      await this.execSafe(["-formats", "-hide_banner"], 3000, 5);
+    });
+    
+    // Parse and populate supportedFormats...
+    
+    this.ready = true;
+  }
+
+  async doConvert(
+    inputFiles: FileData[],
+    inputFormat: FileFormat,
+    outputFormat: FileFormat,
+    args?: string[]
+  ): Promise<FileData[]> {
+    // Write input files to FFmpeg virtual filesystem
+    for (const file of inputFiles) {
+      await this.#ffmpeg.writeFile(file.name, new Uint8Array(file.bytes));
+    }
+
+    // Execute conversion
+    const command = ["-i", "input", "-f", outputFormat.internal, "output"];
+    await this.#ffmpeg.exec(command);
+
+    // Read output
+    const bytes = await this.#ffmpeg.readFile("output");
+    
+    return [{ bytes: new Uint8Array(bytes), name: "output." + outputFormat.extension }];
+  }
+}
+```
+
+## Testing Your Handler
+
+<Steps>
+  <Step title="Unit Testing">
+    Test your handler with various input files:
+    - Different file sizes
+    - Edge cases (empty files, corrupted data)
+    - Multiple files if supported
+  </Step>
+  
+  <Step title="Integration Testing">
+    Test your handler within the full application:
+    - Verify it appears in the format list
+    - Test conversions through the UI
+    - Check multi-step conversions involving your handler
+  </Step>
+  
+  <Step title="Performance Testing">
+    - Monitor memory usage with large files
+    - Check conversion speed
+    - Test browser compatibility
+  </Step>
+</Steps>
+
+## Common Patterns
+
+### Async Initialization
+
+Many handlers need to load external libraries:
+
+```typescript
+async init() {
+  // Load WebAssembly module
+  await loadWasmModule();
+  
+  // Initialize library
+  this.library = new ExternalLibrary();
+  
+  this.ready = true;
+}
+```
+
+### Error Handling
+
+```typescript
+async doConvert(...args): Promise<FileData[]> {
+  if (!this.ready) {
+    throw "Handler not initialized.";
+  }
+  
+  try {
+    // Conversion logic
+  } catch (error) {
+    throw `Conversion failed: ${error}`;
+  }
+}
+```
+
+### Processing Multiple Files
+
+```typescript
+const outputFiles: FileData[] = [];
+
+for (const inputFile of inputFiles) {
+  // Process each file
+  const bytes = await convertFile(inputFile);
+  const name = inputFile.name.replace(/\.[^.]+$/, `.${outputFormat.extension}`);
+  outputFiles.push({ bytes, name });
+}
+
+return outputFiles;
+```
+
+## Next Steps
+
+After creating your handler:
+
+1. Add appropriate [dependencies](/development/adding-dependencies)
+2. Test thoroughly
+3. Submit a pull request following the [contribution guidelines](/development/contributing)
+4. Update documentation if adding significant new functionality

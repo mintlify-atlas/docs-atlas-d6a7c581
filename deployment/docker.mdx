@@ -1,0 +1,194 @@
+---
+title: Docker Deployment
+description: Deploy Convert to it! using Docker containers
+---
+
+Convert to it! can be deployed using Docker for easy, containerized hosting. There are two deployment options: using a prebuilt image or building locally.
+
+## Prebuilt Image (Recommended)
+
+The easiest way to deploy Convert to it! is using the official prebuilt Docker image from GitHub Container Registry.
+
+<Steps>
+  <Step title="Using docker-compose.yml from repository">
+    If you have the repository cloned, navigate to the root directory and run:
+
+    ```bash
+    docker compose -f docker/docker-compose.yml up -d
+    ```
+
+    <Note>
+      The `-f` flag is required because the compose file lives in the `docker/` subdirectory.
+    </Note>
+  </Step>
+
+  <Step title="Using standalone docker-compose.yml">
+    Alternatively, download the `docker-compose.yml` file separately:
+
+    ```bash
+    mkdir convert-docker
+    cd convert-docker
+    curl -O https://raw.githubusercontent.com/p2r3/convert/main/docker/docker-compose.yml
+    ```
+
+    Then start the container:
+
+    ```bash
+    docker compose up -d
+    ```
+  </Step>
+</Steps>
+
+### Configuration
+
+The default `docker-compose.yml` configuration:
+
+```yaml
+services:
+  convert:
+    image: ghcr.io/${GITHUB_REPOSITORY:-p2r3/convert}:${CONVERT_IMAGE_TAG:-latest}
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+```
+
+### Environment Variables
+
+You can customize the deployment using these environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GITHUB_REPOSITORY` | `p2r3/convert` | GitHub repository for the image |
+| `CONVERT_IMAGE_TAG` | `latest` | Docker image tag to use |
+
+**Example with custom tag:**
+
+```bash
+CONVERT_IMAGE_TAG=v1.0.0 docker compose up -d
+```
+
+### Access the Application
+
+Once running, the application is available at:
+
+```
+http://localhost:8080/convert/
+```
+
+<Warning>
+  Note the `/convert/` path at the end - the application is configured with this base path.
+</Warning>
+
+## Local Build for Development
+
+For development or customization, you can build the Docker image locally.
+
+<Steps>
+  <Step title="Clone the repository">
+    Clone the repository with submodules:
+
+    ```bash
+    git clone --recursive https://github.com/p2r3/convert
+    cd convert
+    ```
+  </Step>
+
+  <Step title="Build and run with override">
+    Use the override file to build locally:
+
+    ```bash
+    docker compose -f docker/docker-compose.yml -f docker/docker-compose.override.yml up --build -d
+    ```
+
+    Or use the npm script shortcut:
+
+    ```bash
+    bun run docker
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  **First build is slow:** The initial Docker build installs Chromium and related system packages (needed for Puppeteer in `buildCache.js`). This can take 10-15 minutes. Subsequent builds are much faster due to Docker layer caching.
+</Note>
+
+### Build Scripts
+
+The `package.json` includes convenient scripts for Docker workflows:
+
+| Script | Command | Description |
+|--------|---------|-------------|
+| **docker** | `bun run docker` | Build and start containers |
+| **docker:build** | `bun run docker:build` | Build the Docker image with current git SHA |
+| **docker:up** | `bun run docker:up` | Start containers using docker-compose |
+
+### Build Arguments
+
+When building locally, the following build arguments are available:
+
+```bash
+docker compose -f docker/docker-compose.yml -f docker/docker-compose.override.yml build \
+  --build-arg VITE_COMMIT_SHA=$(git rev-parse HEAD)
+```
+
+- `VITE_COMMIT_SHA` - Git commit hash to embed in the build
+
+## Managing the Container
+
+### View logs
+
+```bash
+docker compose -f docker/docker-compose.yml logs -f
+```
+
+### Stop the container
+
+```bash
+docker compose -f docker/docker-compose.yml down
+```
+
+### Restart the container
+
+```bash
+docker compose -f docker/docker-compose.yml restart
+```
+
+### Update to latest image
+
+```bash
+docker compose -f docker/docker-compose.yml pull
+docker compose -f docker/docker-compose.yml up -d
+```
+
+## Production Deployment
+
+For production deployments:
+
+1. **Use a reverse proxy** (nginx, Caddy, Traefik) to handle SSL/TLS
+2. **Configure proper restart policies** (already set to `unless-stopped`)
+3. **Set up monitoring** for container health
+4. **Use specific image tags** instead of `latest` for reproducible deployments
+
+**Example nginx configuration:**
+
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name convert.example.com;
+
+    ssl_certificate /path/to/cert.pem;
+    ssl_certificate_key /path/to/key.pem;
+
+    location /convert/ {
+        proxy_pass http://localhost:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+## Next Steps
+
+- Set up [local development](/deployment/local-development) environment
+- Build the [desktop application](/deployment/desktop-app)
+- Learn about [adding new file formats](https://github.com/p2r3/convert#contributing)

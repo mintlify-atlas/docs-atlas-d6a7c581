@@ -1,0 +1,541 @@
+---
+title: CommonFormats
+description: Pre-defined format definitions for common file types
+---
+
+## Overview
+
+`CommonFormats` is a collection of pre-configured `FormatDefinition` objects that provide standard definitions for common file formats. These definitions reduce boilerplate when creating format handlers and ensure consistency across the codebase.
+
+## Import
+
+```typescript
+import CommonFormats from "src/CommonFormats.ts";
+import { Category } from "src/CommonFormats.ts";
+```
+
+## FormatDefinition Class
+
+Each entry in `CommonFormats` is an instance of the `FormatDefinition` class, which contains metadata about a file format.
+
+### Constructor
+
+```typescript
+new FormatDefinition(
+  name: string,
+  format: string,
+  extension: string,
+  mime: string,
+  category?: string[] | string
+)
+```
+
+<ResponseField name="name" type="string" required>
+  Long, descriptive name of the format (e.g., "Portable Network Graphics")
+</ResponseField>
+
+<ResponseField name="format" type="string" required>
+  Short, formal name used for identification (e.g., "png")
+</ResponseField>
+
+<ResponseField name="extension" type="string" required>
+  File extension without the dot (e.g., "png")
+</ResponseField>
+
+<ResponseField name="mime" type="string" required>
+  MIME type (e.g., "image/png")
+</ResponseField>
+
+<ResponseField name="category" type="string | string[]">
+  One or more categories from the `Category` constant. Formats can belong to multiple categories.
+</ResponseField>
+
+## Categories
+
+The `Category` object defines standard format categories:
+
+```typescript
+export const Category = {
+    DATA: "data",
+    IMAGE: "image",
+    VIDEO: "video",
+    VECTOR: "vector",
+    DOCUMENT: "document",
+    TEXT: "text",
+    AUDIO: "audio",
+    ARCHIVE: "archive",
+    SPREADSHEET: "spreadsheet",
+    PRESENTATION: "presentation",
+    FONT: "font",
+    CODE: "code"
+}
+```
+
+## Builder Pattern
+
+The `FormatDefinition` class provides a fluent builder API to create `FileFormat` objects for use in handlers.
+
+```typescript
+CommonFormats.PNG.builder("png")
+  .allowFrom()
+  .allowTo()
+  .markLossless()
+```
+
+### Builder Methods
+
+<ResponseField name="builder(ref)" type="function">
+  Creates a builder with the specified internal reference identifier
+</ResponseField>
+
+<ResponseField name="allowFrom(value?)" type="function">
+  Marks format as supporting conversion FROM this format. Defaults to `true`
+</ResponseField>
+
+<ResponseField name="allowTo(value?)" type="function">
+  Marks format as supporting conversion TO this format. Defaults to `true`
+</ResponseField>
+
+<ResponseField name="markLossless(value?)" type="function">
+  Marks the format as lossless in this context. Defaults to `true`
+</ResponseField>
+
+<ResponseField name="named(name)" type="function">
+  Override the format name
+</ResponseField>
+
+<ResponseField name="withFormat(format)" type="function">
+  Override the format identifier
+</ResponseField>
+
+<ResponseField name="withExt(ext)" type="function">
+  Override the file extension
+</ResponseField>
+
+<ResponseField name="withMime(mimetype)" type="function">
+  Override the MIME type
+</ResponseField>
+
+<ResponseField name="withCategory(category)" type="function">
+  Replace the format category
+</ResponseField>
+
+<ResponseField name="override(values)" type="function">
+  Apply multiple overrides at once using a partial object
+</ResponseField>
+
+### Alternative: supported() Method
+
+For simple cases, use the `supported()` method instead of the builder:
+
+```typescript
+CommonFormats.PNG.supported(
+  "png",    // internal reference
+  true,     // allow from
+  true,     // allow to
+  true,     // lossless
+  {}        // optional overrides
+)
+```
+
+## Available Formats
+
+### Image Formats
+
+<ResponseField name="PNG" type="FormatDefinition">
+  **Portable Network Graphics**
+  - Format: `png`
+  - Extension: `.png`
+  - MIME: `image/png`
+  - Category: `IMAGE`
+</ResponseField>
+
+<ResponseField name="JPEG" type="FormatDefinition">
+  **Joint Photographic Experts Group JFIF**
+  - Format: `jpeg`
+  - Extension: `.jpg`
+  - MIME: `image/jpeg`
+  - Category: `IMAGE`
+</ResponseField>
+
+<ResponseField name="WEBP" type="FormatDefinition">
+  **WebP**
+  - Format: `webp`
+  - Extension: `.webp`
+  - MIME: `image/webp`
+  - Category: `IMAGE`
+</ResponseField>
+
+<ResponseField name="TIFF" type="FormatDefinition">
+  **Tagged Image File Format**
+  - Format: `tiff`
+  - Extension: `.tiff`
+  - MIME: `image/tiff`
+  - Category: `IMAGE`
+</ResponseField>
+
+<ResponseField name="BMP" type="FormatDefinition">
+  **Microsoft Windows bitmap image**
+  - Format: `bmp`
+  - Extension: `.bmp`
+  - MIME: `image/bmp`
+  - Category: `IMAGE`
+</ResponseField>
+
+<ResponseField name="GIF" type="FormatDefinition">
+  **CompuServe Graphics Interchange Format (GIF)**
+  - Format: `gif`
+  - Extension: `.gif`
+  - MIME: `image/gif`
+  - Categories: `IMAGE`, `VIDEO`
+</ResponseField>
+
+<ResponseField name="SVG" type="FormatDefinition">
+  **Scalable Vector Graphics**
+  - Format: `svg`
+  - Extension: `.svg`
+  - MIME: `image/svg+xml`
+  - Categories: `IMAGE`, `VECTOR`, `DOCUMENT`
+</ResponseField>
+
+### Data Formats
+
+<ResponseField name="JSON" type="FormatDefinition">
+  **JavaScript Object Notation**
+  - Format: `json`
+  - Extension: `.json`
+  - MIME: `application/json`
+  - Category: `DATA`
+</ResponseField>
+
+<ResponseField name="XML" type="FormatDefinition">
+  **Extensible Markup Language**
+  - Format: `xml`
+  - Extension: `.xml`
+  - MIME: `application/xml`
+  - Category: `DATA`
+</ResponseField>
+
+<ResponseField name="YML" type="FormatDefinition">
+  **YAML Ain't Markup Language**
+  - Format: `yaml`
+  - Extension: `.yml`
+  - MIME: `application/yaml`
+  - Category: `DATA`
+</ResponseField>
+
+<ResponseField name="CSV" type="FormatDefinition">
+  **Comma Separated Values**
+  - Format: `csv`
+  - Extension: `.csv`
+  - MIME: `text/csv`
+  - Category: `DATA`
+</ResponseField>
+
+### Text & Document Formats
+
+<ResponseField name="TEXT" type="FormatDefinition">
+  **Plain Text**
+  - Format: `text`
+  - Extension: `.txt`
+  - MIME: `text/plain`
+  - Category: `TEXT`
+</ResponseField>
+
+<ResponseField name="HTML" type="FormatDefinition">
+  **Hypertext Markup Language**
+  - Format: `html`
+  - Extension: `.html`
+  - MIME: `text/html`
+  - Categories: `DOCUMENT`, `TEXT`
+</ResponseField>
+
+<ResponseField name="MD" type="FormatDefinition">
+  **Markdown Document**
+  - Format: `markdown`
+  - Extension: `.markdown`
+  - MIME: `text/markdown`
+  - Categories: `DOCUMENT`, `TEXT`
+</ResponseField>
+
+<ResponseField name="PDF" type="FormatDefinition">
+  **Portable Document Format**
+  - Format: `pdf`
+  - Extension: `.pdf`
+  - MIME: `application/pdf`
+  - Category: `DOCUMENT`
+</ResponseField>
+
+### Code Formats
+
+<ResponseField name="BATCH" type="FormatDefinition">
+  **Windows Batch file**
+  - Format: `batch`
+  - Extension: `.bat`
+  - MIME: `text/windows-batch`
+  - Category: `TEXT`
+</ResponseField>
+
+<ResponseField name="PYTHON" type="FormatDefinition">
+  **Python Script**
+  - Format: `py`
+  - Extension: `.py`
+  - MIME: `text/x-python`
+  - Category: `CODE`
+</ResponseField>
+
+<ResponseField name="SH" type="FormatDefinition">
+  **Shell Script**
+  - Format: `sh`
+  - Extension: `.sh`
+  - MIME: `application/x-sh`
+  - Category: `TEXT`
+</ResponseField>
+
+<ResponseField name="EXE" type="FormatDefinition">
+  **Windows Portable Executable**
+  - Format: `exe`
+  - Extension: `.exe`
+  - MIME: `application/vnd.microsoft.portable-executable`
+  - Category: `CODE`
+</ResponseField>
+
+### Audio Formats
+
+<ResponseField name="MP3" type="FormatDefinition">
+  **MP3 Audio**
+  - Format: `mp3`
+  - Extension: `.mp3`
+  - MIME: `audio/mpeg`
+  - Category: `AUDIO`
+</ResponseField>
+
+<ResponseField name="WAV" type="FormatDefinition">
+  **Waveform Audio File Format**
+  - Format: `wav`
+  - Extension: `.wav`
+  - MIME: `audio/wav`
+  - Category: `AUDIO`
+</ResponseField>
+
+<ResponseField name="OGG" type="FormatDefinition">
+  **Ogg Audio**
+  - Format: `ogg`
+  - Extension: `.ogg`
+  - MIME: `audio/ogg`
+  - Category: `AUDIO`
+</ResponseField>
+
+<ResponseField name="FLAC" type="FormatDefinition">
+  **Free Lossless Audio Codec**
+  - Format: `flac`
+  - Extension: `.flac`
+  - MIME: `audio/flac`
+  - Category: `AUDIO`
+</ResponseField>
+
+### Video Formats
+
+<ResponseField name="MP4" type="FormatDefinition">
+  **MPEG-4 Part 14**
+  - Format: `mp4`
+  - Extension: `.mp4`
+  - MIME: `video/mp4`
+  - Category: `VIDEO`
+</ResponseField>
+
+### Archive Formats
+
+<ResponseField name="ZIP" type="FormatDefinition">
+  **ZIP Archive**
+  - Format: `zip`
+  - Extension: `.zip`
+  - MIME: `application/zip`
+  - Category: `ARCHIVE`
+</ResponseField>
+
+### Microsoft Office Formats
+
+<ResponseField name="DOCX" type="FormatDefinition">
+  **WordprocessingML Document**
+  - Format: `docx`
+  - Extension: `.docx`
+  - MIME: `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
+  - Category: `DOCUMENT`
+</ResponseField>
+
+<ResponseField name="XLSX" type="FormatDefinition">
+  **SpreadsheetML Workbook**
+  - Format: `xlsx`
+  - Extension: `.xlsx`
+  - MIME: `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+  - Categories: `SPREADSHEET`, `DOCUMENT`
+</ResponseField>
+
+<ResponseField name="PPTX" type="FormatDefinition">
+  **PresentationML Presentation**
+  - Format: `pptx`
+  - Extension: `.pptx`
+  - MIME: `application/vnd.openxmlformats-officedocument.presentationml.presentation`
+  - Categories: `PRESENTATION`, `DOCUMENT`
+</ResponseField>
+
+### Font Formats
+
+<ResponseField name="TTF" type="FormatDefinition">
+  **TrueType Font**
+  - Format: `ttf`
+  - Extension: `.ttf`
+  - MIME: `font/ttf`
+  - Category: `FONT`
+</ResponseField>
+
+<ResponseField name="OTF" type="FormatDefinition">
+  **OpenType Font**
+  - Format: `otf`
+  - Extension: `.otf`
+  - MIME: `font/otf`
+  - Category: `FONT`
+</ResponseField>
+
+<ResponseField name="WOFF" type="FormatDefinition">
+  **Web Open Font Format**
+  - Format: `woff`
+  - Extension: `.woff`
+  - MIME: `font/woff`
+  - Category: `FONT`
+</ResponseField>
+
+<ResponseField name="WOFF2" type="FormatDefinition">
+  **Web Open Font Format 2.0**
+  - Format: `woff2`
+  - Extension: `.woff2`
+  - MIME: `font/woff2`
+  - Category: `FONT`
+</ResponseField>
+
+### Music Notation Formats
+
+<ResponseField name="MUSICXML" type="FormatDefinition">
+  **MusicXML**
+  - Format: `musicxml`
+  - Extension: `.musicxml`
+  - MIME: `application/vnd.recordare.musicxml+xml`
+  - Category: `DOCUMENT`
+</ResponseField>
+
+<ResponseField name="MXL" type="FormatDefinition">
+  **MusicXML Compressed**
+  - Format: `mxl`
+  - Extension: `.mxl`
+  - MIME: `application/vnd.recordare.musicxml`
+  - Category: `DOCUMENT`
+</ResponseField>
+
+## Usage Examples
+
+### Basic Usage with Builder Pattern
+
+```typescript
+import CommonFormats from "src/CommonFormats.ts";
+import type { FormatHandler, FileFormat } from "src/FormatHandler.ts";
+
+class MyHandler implements FormatHandler {
+  name = "MyHandler";
+  supportedFormats: FileFormat[] = [];
+  ready = false;
+
+  async init() {
+    this.supportedFormats = [
+      CommonFormats.PNG.builder("png")
+        .allowFrom()
+        .allowTo()
+        .markLossless(),
+      
+      CommonFormats.JPEG.builder("jpeg")
+        .allowFrom()
+        .allowTo(),
+      
+      CommonFormats.WEBP.builder("webp")
+        .allowTo()
+    ];
+    this.ready = true;
+  }
+
+  async doConvert(/* ... */) {
+    // Implementation
+  }
+}
+```
+
+### Font Handler Example
+
+Real-world example from the font handler (src/handlers/font.ts:232):
+
+```typescript
+import CommonFormats from 'src/CommonFormats.ts';
+
+class fontHandler implements FormatHandler {
+  async init() {
+    this.supportedFormats = [
+      CommonFormats.TTF.builder("ttf").allowFrom().markLossless(),
+      CommonFormats.OTF.builder("otf").allowFrom().allowTo().markLossless(),
+      CommonFormats.WOFF.builder("woff").allowFrom().markLossless(),
+      CommonFormats.WOFF2.builder("woff2").allowFrom().allowTo().markLossless(),
+      CommonFormats.SVG.builder("svg").allowFrom().allowTo()
+    ];
+    this.ready = true;
+  }
+}
+```
+
+### Using supported() Method
+
+```typescript
+import CommonFormats from "src/CommonFormats.ts";
+
+const formats = [
+  CommonFormats.PNG.supported("png", true, true, true),
+  CommonFormats.JPEG.supported("jpeg", true, true, false)
+];
+```
+
+### Overriding Format Properties
+
+```typescript
+import CommonFormats from "src/CommonFormats.ts";
+
+// Using builder
+const customFormat = CommonFormats.PNG.builder("custom-png")
+  .allowFrom()
+  .withMime("image/x-custom-png")
+  .named("Custom PNG Format");
+
+// Using supported() with overrides
+const customFormat2 = CommonFormats.PNG.supported(
+  "custom-png",
+  true,
+  false,
+  true,
+  { mime: "image/x-custom-png", name: "Custom PNG Format" }
+);
+```
+
+### Working with Categories
+
+```typescript
+import CommonFormats, { Category } from "src/CommonFormats.ts";
+
+// Check if a format belongs to a category
+const isSvgImage = CommonFormats.SVG.category?.includes(Category.IMAGE);
+const isSvgVector = CommonFormats.SVG.category?.includes(Category.VECTOR);
+
+// Create custom format with multiple categories
+const customFormat = CommonFormats.TEXT.builder("custom")
+  .withCategory([Category.TEXT, Category.DATA]);
+```
+
+## See Also
+
+- [FormatHandler](/api/format-handler) - Main handler interface
+- [normalizeMimeType](/api/mime-types) - MIME type normalization utility

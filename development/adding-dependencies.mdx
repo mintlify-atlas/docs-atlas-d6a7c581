@@ -1,0 +1,570 @@
+---
+title: Adding Dependencies
+description: How to add dependencies to Convert to it! handlers
+---
+
+When creating format handlers, you'll often need to use external libraries and tools. This guide explains how to properly add dependencies to the project.
+
+## Dependency Types
+
+Convert to it! supports two main types of dependencies:
+
+1. **npm packages** - JavaScript/TypeScript libraries from the npm registry
+2. **Git submodules** - Git repositories included directly in the project
+
+## NPM Packages
+
+For most JavaScript/TypeScript libraries, use npm packages.
+
+### Installing NPM Dependencies
+
+<Steps>
+  <Step title="Install the package">
+    Use Bun to install the package:
+    
+    ```bash
+    bun add package-name
+    ```
+    
+    For development dependencies:
+    ```bash
+    bun add -d package-name
+    ```
+  </Step>
+  
+  <Step title="Install type definitions">
+    If TypeScript types aren't included, install them separately:
+    
+    ```bash
+    bun add -d @types/package-name
+    ```
+  </Step>
+  
+  <Step title="Import in your handler">
+    ```typescript
+    import { SomeFunction } from "package-name";
+    
+    class myHandler implements FormatHandler {
+      // Use the imported package
+    }
+    ```
+  </Step>
+</Steps>
+
+### Example: Using an NPM Package
+
+Many handlers in Convert to it! use npm packages. For example, the FFmpeg handler:
+
+```typescript src/handlers/FFmpeg.ts
+import { FFmpeg } from "@ffmpeg/ffmpeg";
+import type { LogEvent } from "@ffmpeg/ffmpeg";
+import mime from "mime";
+
+class FFmpegHandler implements FormatHandler {
+  #ffmpeg?: FFmpeg;
+  
+  async init() {
+    this.#ffmpeg = new FFmpeg();
+    await this.#ffmpeg.load({
+      coreURL: "/convert/wasm/ffmpeg-core.js"
+    });
+    this.ready = true;
+  }
+}
+```
+
+The dependencies in `package.json`:
+
+```json package.json
+{
+  "dependencies": {
+    "@ffmpeg/core": "^0.12.10",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
+    "mime": "^4.1.0"
+  }
+}
+```
+
+## Git Submodules
+
+For projects that aren't available as npm packages, or when you need the full source code, use Git submodules.
+
+### When to Use Submodules
+
+Use Git submodules when:
+
+- The library isn't published to npm
+- You need to modify the source code
+- The library is specifically designed for this project
+- You want to track a specific version of the repository
+
+### Adding a Git Submodule
+
+<Steps>
+  <Step title="Add the submodule">
+    Add the repository as a submodule in `src/handlers/`:
+    
+    ```bash
+    git submodule add https://github.com/username/repo-name src/handlers/repo-name
+    ```
+  </Step>
+  
+  <Step title="Initialize and update">
+    If you've cloned the project, initialize submodules:
+    
+    ```bash
+    git submodule update --init --recursive
+    ```
+  </Step>
+  
+  <Step title="Import from the submodule">
+    ```typescript
+    import { SomeFunction } from "./submodule-name/src/index.ts";
+    
+    class myHandler implements FormatHandler {
+      // Use the imported code
+    }
+    ```
+  </Step>
+</Steps>
+
+### Current Submodules
+
+Convert to it! uses several Git submodules:
+
+```plaintext .gitmodules
+[submodule "src/handlers/envelope"]
+  path = src/handlers/envelope
+  url = https://github.com/p2r3/envelope
+
+[submodule "src/handlers/qoi-fu"]
+  path = src/handlers/qoi-fu
+  url = https://github.com/pfusik/qoi-fu
+
+[submodule "src/handlers/sppd"]
+  path = src/handlers/sppd
+  url = https://github.com/p2r3/sppd
+
+[submodule "src/handlers/qoa-fu"]
+  path = src/handlers/qoa-fu
+  url = https://github.com/pfusik/qoa-fu
+
+[submodule "src/handlers/image-to-txt"]
+  path = src/handlers/image-to-txt
+  url = https://git.sr.ht/~thezipcreator/image-to-txt
+
+[submodule "src/handlers/espeakng.js"]
+  path = src/handlers/espeakng.js
+  url = https://github.com/TheZipCreator/espeakng.js
+```
+
+### Example: Using a Submodule
+
+The canvas-to-blob handler uses the `image-to-txt` submodule:
+
+```typescript src/handlers/canvasToBlob.ts
+import { imageToText, rgbaToGrayscale } from "./image-to-txt/src/convert.ts";
+
+class canvasToBlobHandler implements FormatHandler {
+  async doConvert(inputFiles, inputFormat, outputFormat) {
+    // Use the submodule function
+    const text = imageToText(imageData);
+  }
+}
+```
+
+## WebAssembly Dependencies
+
+Many conversion tools use WebAssembly (WASM) for performance. These require special handling.
+
+### Setting Up WebAssembly
+
+<Steps>
+  <Step title="Add the WASM file">
+    Place the `.wasm` file in your handler directory or `node_modules` (if from npm):
+    
+    ```
+    src/handlers/my-handler/my-library.wasm
+    ```
+    
+    Or install via npm:
+    ```bash
+    bun add wasm-library
+    ```
+  </Step>
+  
+  <Step title="Configure Vite">
+    Add the WASM file to Vite's static copy configuration in `vite.config.js`:
+    
+    ```javascript vite.config.js
+    export default defineConfig({
+      plugins: [
+        viteStaticCopy({
+          targets: [
+            {
+              src: "src/handlers/my-handler/my-library.wasm",
+              dest: "wasm"
+            },
+            // Or from node_modules
+            {
+              src: "node_modules/wasm-library/dist/library.wasm",
+              dest: "wasm"
+            }
+          ]
+        })
+      ]
+    });
+    ```
+  </Step>
+  
+  <Step title="Load in handler">
+    Load the WASM file from `/convert/wasm/` in your handler:
+    
+    ```typescript
+    async init() {
+      await loadWasm("/convert/wasm/my-library.wasm");
+      this.ready = true;
+    }
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+**Do not link to node_modules directly!**
+
+Always copy WASM files to the `/convert/wasm/` directory via Vite configuration. Direct linking to `node_modules` can cause issues in production builds.
+</Warning>
+
+### Real Example: FFmpeg WebAssembly
+
+The FFmpeg handler demonstrates WebAssembly setup:
+
+```typescript src/handlers/FFmpeg.ts
+class FFmpegHandler implements FormatHandler {
+  #ffmpeg?: FFmpeg;
+
+  async loadFFmpeg() {
+    if (!this.#ffmpeg) return;
+    return await this.#ffmpeg.load({
+      coreURL: "/convert/wasm/ffmpeg-core.js"
+    });
+  }
+
+  async init() {
+    this.#ffmpeg = new FFmpeg();
+    await this.loadFFmpeg();
+    // ... rest of initialization
+  }
+}
+```
+
+With the corresponding Vite configuration:
+
+```javascript vite.config.js
+export default defineConfig({
+  plugins: [
+    viteStaticCopy({
+      targets: [
+        {
+          src: "node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.*",
+          dest: "wasm"
+        }
+      ]
+    })
+  ]
+});
+```
+
+### Multiple WebAssembly Files
+
+Some libraries require multiple files (WASM + JS glue code):
+
+```javascript vite.config.js
+{
+  targets: [
+    {
+      src: "src/handlers/libopenmpt/libopenmpt.wasm",
+      dest: "wasm"
+    },
+    {
+      src: "src/handlers/libopenmpt/libopenmpt.js",
+      dest: "wasm"
+    }
+  ]
+}
+```
+
+## Avoid CDNs
+
+<Warning>
+**Please try to avoid CDNs (Content Delivery Networks)**
+
+While CDNs are convenient, they have downsides:
+- Don't work well with TypeScript
+- Each introduces instability
+- Can cause build issues
+- May have version inconsistencies
+
+For a project that leans heavily on external dependencies, these issues can add up fast.
+</Warning>
+
+### Alternatives to CDNs
+
+<Tabs>
+  <Tab title="NPM Package">
+    ```bash
+    # Instead of loading from CDN
+    bun add library-name
+    ```
+    
+    ```typescript
+    // Import directly
+    import Library from "library-name";
+    ```
+  </Tab>
+  
+  <Tab title="Git Submodule">
+    ```bash
+    # Include the source directly
+    git submodule add https://github.com/user/library src/handlers/library
+    ```
+    
+    ```typescript
+    // Import from submodule
+    import Library from "./library/src/index.ts";
+    ```
+  </Tab>
+  
+  <Tab title="Vendored Code">
+    ```bash
+    # Copy source files to your project
+    cp -r external-lib/ src/handlers/my-handler/vendor/
+    ```
+    
+    ```typescript
+    // Import from vendored code
+    import Library from "./vendor/external-lib/index.ts";
+    ```
+  </Tab>
+</Tabs>
+
+## Common Dependencies in Convert to it!
+
+Here are examples of well-integrated dependencies:
+
+### Image Processing
+
+```json package.json
+{
+  "dependencies": {
+    "@imagemagick/magick-wasm": "^0.0.37",
+    "imagetracer": "^0.2.2"
+  }
+}
+```
+
+### Audio/Video Processing
+
+```json package.json
+{
+  "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/core": "^0.12.10",
+    "meyda": "^5.6.3",
+    "wavefile": "^11.0.0"
+  }
+}
+```
+
+### Document Processing
+
+```json package.json
+{
+  "dependencies": {
+    "pdftoimg-js": "^0.2.5",
+    "verovio": "^6.0.1"
+  }
+}
+```
+
+### Data Formats
+
+```json package.json
+{
+  "dependencies": {
+    "jszip": "^3.10.1",
+    "pako": "^2.1.0",
+    "bson": "^7.2.0",
+    "nbtify": "^2.2.0",
+    "papaparse": "^5.5.3"
+  }
+}
+```
+
+## Dependency Checklist
+
+Before adding a dependency, check:
+
+<AccordionGroup>
+  <Accordion title="License Compatibility">
+    Ensure the dependency's license is compatible with GPL-2.0 (Convert to it!'s license).
+    
+    Compatible licenses:
+    - MIT
+    - BSD
+    - Apache 2.0
+    - GPL-2.0 or later
+    - LGPL
+  </Accordion>
+  
+  <Accordion title="Browser Compatibility">
+    The dependency must work in browsers. Check for:
+    - No Node.js-specific APIs (unless polyfilled)
+    - WebAssembly support if needed
+    - Reasonable bundle size
+  </Accordion>
+  
+  <Accordion title="Maintenance Status">
+    Prefer actively maintained dependencies:
+    - Recent commits/releases
+    - Responsive maintainers
+    - Good documentation
+  </Accordion>
+  
+  <Accordion title="TypeScript Support">
+    Ensure TypeScript types are available:
+    - Bundled with the package
+    - Available via `@types/` package
+    - Or you're willing to write them
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<Steps>
+  <Step title="Keep dependencies minimal">
+    Only add dependencies that are truly necessary. Each dependency:
+    - Increases bundle size
+    - Adds maintenance burden
+    - Can introduce security vulnerabilities
+  </Step>
+  
+  <Step title="Lock versions appropriately">
+    Use semantic versioning wisely:
+    ```json
+    {
+      "@ffmpeg/ffmpeg": "^0.12.15",  // Allow minor/patch updates
+      "critical-lib": "1.2.3"        // Lock exact version if needed
+    }
+    ```
+  </Step>
+  
+  <Step title="Document special setup">
+    If your dependency requires special configuration, document it:
+    - In your handler file comments
+    - In the pull request description
+    - In code comments near usage
+  </Step>
+  
+  <Step title="Test thoroughly">
+    Test your handler with the new dependency:
+    - In development mode
+    - In production build
+    - Across different browsers
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+### Module Not Found
+
+If imports fail:
+
+```bash
+# Reinstall dependencies
+bun install
+
+# Clear cache and rebuild
+rm -rf node_modules
+bun install
+```
+
+### WebAssembly Loading Fails
+
+Check:
+1. WASM file is in Vite static copy config
+2. Path in handler uses `/convert/wasm/` prefix
+3. File extension is `.wasm`
+4. WASM file was actually copied to dist
+
+### Type Errors
+
+If TypeScript can't find types:
+
+```bash
+# Install type definitions
+bun add -d @types/package-name
+
+# Or add to tsconfig.json
+{
+  "compilerOptions": {
+    "types": ["package-name"]
+  }
+}
+```
+
+## Example: Complete Dependency Setup
+
+Here's a complete example of adding a new handler with dependencies:
+
+<Steps>
+  <Step title="Install npm package">
+    ```bash
+    bun add new-format-library
+    bun add -d @types/new-format-library
+    ```
+  </Step>
+  
+  <Step title="Add WASM to Vite config (if needed)">
+    ```javascript vite.config.js
+    {
+      src: "node_modules/new-format-library/dist/library.wasm",
+      dest: "wasm"
+    }
+    ```
+  </Step>
+  
+  <Step title="Create handler">
+    ```typescript src/handlers/newFormat.ts
+    import { convert } from "new-format-library";
+    import type { FileData, FileFormat, FormatHandler } from "../FormatHandler.ts";
+
+    class newFormatHandler implements FormatHandler {
+      public name = "newFormat";
+      public ready = false;
+
+      async init() {
+        // Load WASM if needed
+        await loadWasm("/convert/wasm/library.wasm");
+        this.ready = true;
+      }
+
+      async doConvert(inputFiles, inputFormat, outputFormat) {
+        const result = await convert(inputFiles[0].bytes, outputFormat.internal);
+        return [{ bytes: result, name: "output." + outputFormat.extension }];
+      }
+    }
+
+    export default newFormatHandler;
+    ```
+  </Step>
+  
+  <Step title="Register handler">
+    ```typescript src/handlers/index.ts
+    import newFormatHandler from "./newFormat.ts";
+    
+    try { handlers.push(new newFormatHandler()) } catch (_) { };
+    ```
+  </Step>
+</Steps>

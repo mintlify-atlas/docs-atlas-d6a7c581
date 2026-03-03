@@ -1,0 +1,427 @@
+---
+title: "pandocHandler"
+description: "Document format conversion handler using Pandoc WASM"
+---
+
+## Overview
+
+The `pandocHandler` provides document format conversion using Pandoc compiled to WebAssembly. It supports extensive document formats including Markdown variants, office documents, HTML, LaTeX, and many markup languages.
+
+## Supported Formats
+
+PandocHandler queries Pandoc at runtime for input and output formats. It supports 80+ formats across multiple categories:
+
+### Markdown Variants
+- **Markdown** - Pandoc's Markdown
+- **GFM** - GitHub-Flavored Markdown
+- **CommonMark** - CommonMark Markdown
+- **CommonMark_x** - CommonMark with extensions
+- **Markdown_strict** - Original unextended Markdown
+- **Markdown_mmd** - MultiMarkdown
+- **Markdown_phpextra** - PHP Markdown Extra
+
+### Office Documents
+- **DOCX** - Microsoft Word Document
+- **XLSX** - Microsoft Excel Spreadsheet
+- **PPTX** - Microsoft PowerPoint Presentation
+- **ODT** - OpenDocument Text
+- **RTF** - Rich Text Format
+
+### Markup Languages
+- **HTML** - Hypertext Markup Language
+- **HTML5** - HTML5
+- **LaTeX** - LaTeX typesetting
+- **reStructuredText** - RST
+- **AsciiDoc** - AsciiDoc markup
+- **MediaWiki** - MediaWiki markup
+- **Textile** - Textile markup
+- **Org** - Emacs Org mode
+
+### Presentation Formats
+- **Beamer** - LaTeX Beamer slides
+- **DZSlides** - DZSlides HTML slides
+- **Slidy** - Slidy HTML slides
+- **Slideous** - Slideous HTML slides
+- **S5** - S5 HTML slides
+
+### Other Formats
+- **EPUB** - Electronic Publication (v2 and v3)
+- **DocBook** - DocBook v4 and v5
+- **JATS** - JATS XML
+- **TEI** - TEI Simple
+- **Typst** - Typst typesetting
+- **Jupyter** - Jupyter notebooks (.ipynb)
+- **CSV** - Comma-Separated Values
+- **TSV** - Tab-Separated Values
+- **JSON** - JSON (CSL bibliography)
+- **XML** - Various XML formats
+- **MathML** - Mathematical Markup Language
+
+### Filtered Formats
+
+```typescript
+// PDF removed - doesn't work in this configuration
+if (format === "pdf") continue;
+
+// RevealJS removed - hangs indefinitely
+if (format === "revealjs") continue;
+```
+
+## Initialization
+
+The handler dynamically loads Pandoc and queries supported formats:
+
+```typescript
+const handler = new pandocHandler();
+await handler.init();
+```
+
+### Initialization Process
+
+1. Dynamically imports Pandoc WASM module
+2. Queries input formats: `pandoc --query input-formats`
+3. Queries output formats: `pandoc --query output-formats`
+4. Manually adds MathML (supported but not exposed by query)
+5. Normalizes format metadata
+6. Categorizes formats
+7. Prioritizes common formats
+
+```typescript
+const { query, convert } = await import("./pandoc/pandoc.js");
+this.query = query;
+this.convert = convert;
+
+const inputFormats: string[] = await query({ query: "input-formats" });
+const outputFormats: string[] = await query({ query: "output-formats" });
+
+// Pandoc supports MathML natively but doesn't expose as a format
+outputFormats.push("mathml");
+```
+
+## Format Naming
+
+The handler uses custom format names for better clarity:
+
+```typescript
+static formatNames: Map<string, string> = new Map([
+  ["html", "Hypertext Markup Language"],
+  ["docx", "Microsoft Word Document"],
+  ["xlsx", "Microsoft Excel Spreadsheet"],
+  ["pptx", "Microsoft PowerPoint Presentation"],
+  ["markdown", "Pandoc's Markdown"],
+  ["gfm", "GitHub-Flavored Markdown"],
+  ["latex", "LaTeX"],
+  ["epub", "EPUB v3"],
+  ["csv", "Comma-Separated Values"],
+  ["json", "JavaScript Object Notation"],
+  ["xml", "Extensible Markup Language"],
+  ["rst", "reStructuredText"],
+  ["org", "Emacs Org mode"],
+  ["mediawiki", "MediaWiki markup"],
+  ["textile", "Textile"],
+  ["typst", "Typst"],
+  // ... and 70+ more
+]);
+```
+
+## Format Extensions
+
+Custom extension mappings for formats where extension differs from format name:
+
+```typescript
+static formatExtensions: Map<string, string> = new Map([
+  ["html5", "html"],
+  ["markdown", "md"],
+  ["gfm", "md"],
+  ["latex", "tex"],
+  ["beamer", "tex"],
+  ["typst", "typ"],
+  ["djot", "dj"],
+  ["rst", "rst"],
+  ["asciidoc", "adoc"],
+  ["vimdoc", "txt"],
+  // ... and more
+]);
+```
+
+## Format Categorization
+
+Formats are categorized for filtering and organization:
+
+### Spreadsheets
+```typescript
+if (format === "xlsx") categories.push("spreadsheet");
+```
+
+### Presentations
+```typescript
+else if (format === "pptx") categories.push("presentation");
+```
+
+### Text Formats
+```typescript
+if (
+  name.toLowerCase().includes("text")
+  || mimeType === "text/plain"
+) {
+  categories.push("text");
+} else {
+  categories.push("document");
+}
+```
+
+## Conversion Process
+
+### Basic Conversion
+
+```typescript
+const outputFiles = await handler.doConvert(
+  inputFiles,
+  inputFormat,
+  outputFormat
+);
+```
+
+### Per-File Processing
+
+Unlike other handlers, pandocHandler processes files individually:
+
+```typescript
+const outputFiles: FileData[] = [];
+
+for (const inputFile of inputFiles) {
+  const files = {
+    [inputFile.name]: new Blob([inputFile.bytes as BlobPart])
+  };
+  
+  let options = {
+    from: inputFormat.internal,
+    to: outputFormat.internal,
+    "input-files": [inputFile.name],
+    "output-file": "output",
+    "embed-resources": true,
+    "html-math-method": "mathjax",
+  }
+  
+  const { stderr } = await this.convert(options, null, files);
+  
+  if (stderr) throw stderr;
+  
+  const outputBlob = files.output;
+  const arrayBuffer = await outputBlob.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+  
+  outputFiles.push({ bytes, name });
+}
+
+return outputFiles;
+```
+
+## Conversion Options
+
+<ParamField path="from" type="string" required>
+  Input format identifier (e.g., "markdown", "docx")
+</ParamField>
+
+<ParamField path="to" type="string" required>
+  Output format identifier (e.g., "html", "pdf")
+</ParamField>
+
+<ParamField path="input-files" type="string[]" required>
+  Array of input filenames in the virtual file system
+</ParamField>
+
+<ParamField path="output-file" type="string" required>
+  Output filename in the virtual file system
+</ParamField>
+
+<ParamField path="embed-resources" type="boolean" default={true}>
+  Embed all resources (images, CSS, etc.) in the output file
+</ParamField>
+
+<ParamField path="html-math-method" type="string" default="mathjax">
+  Method for rendering math in HTML output: `"mathjax"` or `"mathml"`
+</ParamField>
+
+## Special Format Handling
+
+### MathML Output
+
+MathML is handled specially since Pandoc doesn't expose it as a format:
+
+```typescript
+if (outputFormat.internal === "mathml") {
+  options.to = "html";
+  options["html-math-method"] = "mathml";
+}
+```
+
+This outputs HTML with MathML for mathematical expressions.
+
+### Plain Text Normalization
+
+Pandoc's "plain" format is normalized to "text" for consistency:
+
+```typescript
+if (format === "plain") format = "text";
+```
+
+### Resource Embedding
+
+HTML outputs automatically embed all resources:
+
+```typescript
+"embed-resources": true,
+```
+
+This ensures images and stylesheets are included in the output file.
+
+## Format Prioritization
+
+HTML is prioritized as it can embed resources:
+
+```typescript
+const htmlIndex = this.supportedFormats.findIndex(c => c.internal === "html");
+const htmlFormat = this.supportedFormats[htmlIndex];
+this.supportedFormats.splice(htmlIndex, 1);
+this.supportedFormats.unshift(htmlFormat);
+```
+
+JSON/XML formats are deprioritized (moved to end) as Pandoc's internal formats are rarely what users want:
+
+```typescript
+const jsonXmlFormats = this.supportedFormats.filter(c =>
+  c.mime === "application/json"
+  || c.mime === "application/xml"
+);
+this.supportedFormats = this.supportedFormats.filter(c =>
+  c.mime !== "application/json"
+  && c.mime !== "application/xml"
+);
+this.supportedFormats.push(...jsonXmlFormats);
+```
+
+## Lossless Detection
+
+Office formats are marked as lossy due to conversion limitations:
+
+```typescript
+const isOfficeDocument = format === "docx"
+  || format === "xlsx"
+  || format === "pptx"
+  || format === "odt"
+  || format === "ods"
+  || format === "odp";
+  
+lossless: !isOfficeDocument
+```
+
+## Output File Naming
+
+Output files preserve the base name with updated extension:
+
+```typescript
+const name = inputFile.name.split(".").slice(0, -1).join(".") + "." + outputFormat.extension;
+```
+
+This handles filenames with multiple dots (e.g., `archive.tar.gz`).
+
+## Error Handling
+
+```typescript
+if (stderr) throw stderr;
+```
+
+Pandoc errors are thrown immediately and include diagnostic information.
+
+## Virtual File System
+
+Pandoc uses a virtual file system for I/O:
+
+```typescript
+const files = {
+  [inputFile.name]: new Blob([inputFile.bytes as BlobPart])
+};
+
+await this.convert(options, null, files);
+
+// Output is written back to the files object
+const outputBlob = files.output;
+```
+
+## Format Metadata Structure
+
+<ParamField path="name" type="string">
+  Human-readable format name from formatNames map
+</ParamField>
+
+<ParamField path="format" type="string">
+  Normalized format identifier (e.g., "text" instead of "plain")
+</ParamField>
+
+<ParamField path="extension" type="string">
+  File extension from formatExtensions map or format name
+</ParamField>
+
+<ParamField path="mime" type="string">
+  Normalized MIME type
+</ParamField>
+
+<ParamField path="from" type="boolean">
+  Whether format can be used as input
+</ParamField>
+
+<ParamField path="to" type="boolean">
+  Whether format can be used as output
+</ParamField>
+
+<ParamField path="internal" type="string">
+  Pandoc's internal format identifier
+</ParamField>
+
+<ParamField path="category" type="string | string[]">
+  Single category or array: `"text"`, `"document"`, `"spreadsheet"`, `"presentation"`
+</ParamField>
+
+<ParamField path="lossless" type="boolean">
+  `false` for office documents, `true` for others
+</ParamField>
+
+## Properties
+
+<ParamField path="name" type="string" default="pandoc">
+  Handler identifier
+</ParamField>
+
+<ParamField path="supportedFormats" type="FileFormat[] | undefined">
+  Array of supported formats populated during initialization
+</ParamField>
+
+<ParamField path="ready" type="boolean">
+  `true` when initialization is complete and handler is ready for conversions
+</ParamField>
+
+## Performance Considerations
+
+- Processes files individually (no batch optimization)
+- Embeds all resources by default (increases file size)
+- Suitable for text-based document conversions
+- May be slower than native handlers for large files
+
+## Use Cases
+
+**Ideal for:**
+- Markdown to HTML conversion
+- Document format interchange (DOCX ↔ ODT ↔ HTML)
+- Creating presentations from Markdown
+- Converting between markup languages
+- Academic writing workflows (LaTeX, EPUB, etc.)
+
+**Not ideal for:**
+- PDF generation (disabled in this configuration)
+- RevealJS presentations (hangs indefinitely)
+- Large binary office documents
+
+## Source Reference
+
+Implementation: `~/workspace/source/src/handlers/pandoc.ts`

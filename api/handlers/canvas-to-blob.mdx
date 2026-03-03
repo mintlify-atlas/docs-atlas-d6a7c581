@@ -1,0 +1,351 @@
+---
+title: "canvasToBlobHandler"
+description: "Browser Canvas API-based image conversion handler"
+---
+
+## Overview
+
+The `canvasToBlobHandler` provides image format conversion using the browser's native Canvas API. It's particularly useful for lightweight conversions and supports text-to-image rendering.
+
+## Supported Formats
+
+Unlike other handlers, canvasToBlobHandler uses a fixed list of formats:
+
+<ParamField path="PNG" type="image format">
+  **Portable Network Graphics**
+  - Bidirectional (read/write)
+  - Lossless
+  - Supports transparency
+</ParamField>
+
+<ParamField path="JPEG" type="image format">
+  **Joint Photographic Experts Group**
+  - Bidirectional (read/write)
+  - Lossy compression
+</ParamField>
+
+<ParamField path="WebP" type="image format">
+  **Web Picture format**
+  - Bidirectional (read/write)
+  - Modern web format
+</ParamField>
+
+<ParamField path="GIF" type="image format">
+  **Graphics Interchange Format**
+  - Read-only (input only)
+  - Animated GIF support for reading
+</ParamField>
+
+<ParamField path="SVG" type="vector format">
+  **Scalable Vector Graphics**
+  - Read-only (input only)
+  - Rasterized when converted to other formats
+</ParamField>
+
+<ParamField path="TEXT" type="text format">
+  **Plain text**
+  - Bidirectional (read/write)
+  - Text-to-image and image-to-ASCII
+</ParamField>
+
+```typescript
+public supportedFormats: FileFormat[] = [
+  CommonFormats.PNG.supported("png", true, true, true),
+  CommonFormats.JPEG.supported("jpeg", true, true),
+  CommonFormats.WEBP.supported("webp", true, true),
+  CommonFormats.GIF.supported("gif", true, false),
+  CommonFormats.SVG.supported("svg", true, false),
+  CommonFormats.TEXT.supported("text", true, true)
+];
+```
+
+## Initialization
+
+The handler creates an off-screen canvas element:
+
+```typescript
+const handler = new canvasToBlobHandler();
+await handler.init();
+```
+
+### Initialization Process
+
+```typescript
+async init () {
+  this.#canvas = document.createElement("canvas");
+  this.#ctx = this.#canvas.getContext("2d") || undefined;
+  this.ready = true;
+}
+```
+
+The canvas is created in-memory and never attached to the DOM.
+
+## Conversion Process
+
+### Image to Image Conversion
+
+For image-to-image conversions:
+
+1. Create Blob from input bytes
+2. Generate object URL (or data URL for SVG)
+3. Load into Image element
+4. Draw to canvas
+5. Export via `canvas.toBlob()`
+
+```typescript
+const blob = new Blob([inputFile.bytes as BlobPart], { type: inputFormat.mime });
+const url = URL.createObjectURL(blob);
+
+const image = new Image();
+await new Promise((resolve, reject) => {
+  image.addEventListener("load", resolve);
+  image.addEventListener("error", reject);
+  image.src = url;
+});
+
+this.#canvas.width = image.naturalWidth;
+this.#canvas.height = image.naturalHeight;
+this.#ctx.drawImage(image, 0, 0);
+
+bytes = await new Promise((resolve, reject) => {
+  this.#canvas!.toBlob((blob) => {
+    if (!blob) return reject("Canvas output failed");
+    blob.arrayBuffer().then(buf => resolve(new Uint8Array(buf)));
+  }, outputFormat.mime);
+});
+```
+
+## Text to Image Conversion
+
+When converting from plain text to images, the handler renders text on the canvas:
+
+```typescript
+if (inputFormat.mime === "text/plain") {
+  const font = "48px sans-serif";
+  const fontSize = parseInt(font);
+  const footerPadding = fontSize * 0.5;
+  const string = new TextDecoder().decode(inputFile.bytes);
+  const lines = string.split("\n");
+  
+  this.#ctx.font = font;
+  
+  // Measure text to determine canvas size
+  let maxLineWidth = 0;
+  for (const line of lines) {
+    const width = this.#ctx.measureText(line).width;
+    if (width > maxLineWidth) maxLineWidth = width;
+  }
+  
+  this.#canvas.width = maxLineWidth;
+  this.#canvas.height = Math.floor(fontSize * lines.length + footerPadding);
+  
+  // Draw white background for image formats
+  if (outputFormat.category === "image" || outputFormat.category?.includes("image")) {
+    this.#ctx.fillStyle = "white";
+    this.#ctx.fillRect(0, 0, this.#canvas.width, this.#canvas.height);
+  }
+  
+  // Render text
+  this.#ctx.fillStyle = "black";
+  this.#ctx.strokeStyle = "white";
+  this.#ctx.font = font;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    this.#ctx.fillText(line, 0, fontSize * (i + 1));
+    this.#ctx.strokeText(line, 0, fontSize * (i + 1));
+  }
+}
+```
+
+### Text Rendering Details
+
+<ParamField path="font" type="string" default="48px sans-serif">
+  Font specification for text rendering
+</ParamField>
+
+<ParamField path="fontSize" type="number" default={48}>
+  Extracted from font string (e.g., `parseInt("48px sans-serif")`)
+</ParamField>
+
+<ParamField path="footerPadding" type="number">
+  Bottom padding calculated as `fontSize * 0.5`
+</ParamField>
+
+<ParamField path="fillStyle" type="string" default="black">
+  Text color (black text on white background)
+</ParamField>
+
+<ParamField path="strokeStyle" type="string" default="white">
+  Text outline color for better readability
+</ParamField>
+
+## Image to Text Conversion
+
+When converting images to text, the handler uses ASCII art conversion:
+
+```typescript
+if(outputFormat.mime == "text/plain") {
+  const pixels = this.#ctx.getImageData(0, 0, this.#canvas.width, this.#canvas.height);
+  bytes = new TextEncoder().encode(imageToText({
+    width() { return pixels.width; },
+    height() { return pixels.height; },
+    getPixel(x: number, y: number) {
+      const index = (y*pixels.width + x)*4;
+      return rgbaToGrayscale(
+        pixels.data[index]/255,
+        pixels.data[index+1]/255,
+        pixels.data[index+2]/255,
+        pixels.data[index+3]/255
+      );
+    }
+  }));
+}
+```
+
+This uses the `imageToText` function from `./image-to-txt/src/convert.ts` to generate ASCII art.
+
+## SVG Handling
+
+SVG images require special handling to avoid tainted canvas errors:
+
+```typescript
+const url =
+  inputFormat.mime === "image/svg+xml"
+    ? `data:${inputFormat.mime};base64,${btoa(inputFile.bytes.reduce((str, byte) => str + String.fromCharCode(byte), ''))}`
+    : URL.createObjectURL(blob);
+```
+
+**Why data URLs for SVG?**
+- Object URLs from `Blob` can cause CORS issues with SVG
+- Data URLs avoid "Tainted canvases may not be exported" errors
+- Base64 encoding ensures SVG content is properly embedded
+
+## Canvas Sizing
+
+### For Images
+
+Canvas is sized to match the natural dimensions of the input image:
+
+```typescript
+this.#canvas.width = image.naturalWidth;
+this.#canvas.height = image.naturalHeight;
+this.#ctx.drawImage(image, 0, 0);
+```
+
+### For Text
+
+Canvas is sized based on text content:
+
+```typescript
+// Width: longest line
+let maxLineWidth = 0;
+for (const line of lines) {
+  const width = this.#ctx.measureText(line).width;
+  if (width > maxLineWidth) maxLineWidth = width;
+}
+this.#canvas.width = maxLineWidth;
+
+// Height: line count * font size + padding
+this.#canvas.height = Math.floor(fontSize * lines.length + footerPadding);
+```
+
+## Output File Naming
+
+Output files replace the input extension:
+
+```typescript
+const name = inputFile.name.split(".")[0] + "." + outputFormat.extension;
+```
+
+Example: `photo.png` → `photo.jpeg`
+
+## Error Handling
+
+### Uninitialized Handler
+
+```typescript
+if (!this.#canvas || !this.#ctx) {
+  throw "Handler not initialized.";
+}
+```
+
+### Image Loading Errors
+
+```typescript
+const image = new Image();
+await new Promise((resolve, reject) => {
+  image.addEventListener("load", resolve);
+  image.addEventListener("error", reject);
+  image.src = url;
+});
+```
+
+### Canvas Export Errors
+
+```typescript
+this.#canvas!.toBlob((blob) => {
+  if (!blob) return reject("Canvas output failed");
+  blob.arrayBuffer().then(buf => resolve(new Uint8Array(buf)));
+}, outputFormat.mime);
+```
+
+## Properties
+
+<ParamField path="name" type="string" default="canvasToBlob">
+  Handler identifier
+</ParamField>
+
+<ParamField path="supportedFormats" type="FileFormat[]">
+  Fixed array of 6 supported formats (PNG, JPEG, WebP, GIF, SVG, TEXT)
+</ParamField>
+
+<ParamField path="ready" type="boolean">
+  `true` when canvas is initialized and handler is ready for conversions
+</ParamField>
+
+## Use Cases
+
+**Ideal for:**
+- Simple image format conversions (PNG ↔ JPEG ↔ WebP)
+- Text-to-image generation
+- Image-to-ASCII art conversion
+- SVG rasterization
+- Lightweight conversions without heavy WASM dependencies
+
+**Not ideal for:**
+- Advanced image processing
+- GIF or WebP animation (only reads first frame)
+- Format-specific optimizations
+- Batch processing of large files
+
+## Performance Considerations
+
+- Lightweight - no WASM dependencies
+- Fast initialization (just creates canvas element)
+- Processes files individually
+- Limited by browser Canvas API capabilities
+- No native support for animated formats (GIF, APNG, WebP)
+
+## Limitations
+
+1. **GIF Output**: Cannot write GIF files (read-only)
+2. **SVG Output**: Cannot write SVG files (read-only)
+3. **Animation**: Only reads first frame of animated formats
+4. **Quality**: Limited to browser's Canvas implementation
+5. **Format Support**: Only formats supported by Canvas API
+
+## Browser Compatibility
+
+The handler requires:
+- Canvas API support
+- `canvas.toBlob()` method
+- `CanvasRenderingContext2D.measureText()` for text rendering
+- Image loading via Image element
+
+## Source Reference
+
+Implementation: `~/workspace/source/src/handlers/canvasToBlob.ts`
+
+Dependencies:
+- `image-to-txt/src/convert.ts` - ASCII art conversion

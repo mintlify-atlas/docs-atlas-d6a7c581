@@ -1,0 +1,235 @@
+---
+title: Using the Converter
+description: Complete guide to converting files with Convert to it!
+---
+
+Convert to it! is a browser-based universal file converter that processes everything locally in your browser - no uploads, no privacy concerns, just pure conversion power.
+
+## File Selection
+
+There are three ways to select files for conversion:
+
+### Method 1: Click to Browse
+
+1. Click the large blue box labeled "Click to add your file"
+2. Browse your file system and select the file you want to convert
+3. Click "Open" to confirm
+
+### Method 2: Drag and Drop
+
+1. Locate your file in your file explorer
+2. Drag the file directly onto the browser window
+3. Drop it anywhere on the page
+
+### Method 3: Paste from Clipboard
+
+1. Copy a file to your clipboard (using Ctrl+C or Cmd+C)
+2. Click on the Convert to it! window
+3. Press Ctrl+V (or Cmd+V on Mac) to paste
+
+<Note>
+All input files must be of the same type when converting multiple files. If you try to select files with different formats, you'll receive an error.
+</Note>
+
+## Format Selection
+
+### Input Format
+
+After selecting your file, Convert to it! automatically detects the input format in most cases:
+
+- The format is detected using the file's MIME type
+- If multiple formats share the same MIME type, the file extension is used as a tiebreaker
+- If automatic detection fails, use the search box to find your format manually
+
+**Input format list** is located on the left side (desktop) or at the top (mobile).
+
+### Output Format
+
+Select your desired output format from the second list:
+
+- **Output format list** is located on the right side (desktop) or below the input list (mobile)
+- Use the search box to quickly find formats by name or extension
+- You can search by format name (e.g., "PNG"), extension (e.g., "png"), or MIME type
+
+<Tip>
+Try searching for the category you want, like "image", "video", or "audio" to see related formats.
+</Tip>
+
+## Simple vs Advanced Mode
+
+Convert to it! offers two modes to balance ease of use with power-user functionality:
+
+<Tabs>
+  <Tab title="Simple Mode (Default)">
+    ### Simple Mode
+
+    **Best for most users** - recommended unless you need specific handler control.
+
+    **Features:**
+    - Each format appears only once in the lists
+    - Automatically selects the best conversion handler
+    - Cleaner, less cluttered interface
+    - Blue highlight color indicates simple mode
+
+    **How it works:**
+    - The converter automatically finds the best path between formats
+    - If one route fails, it tries alternative handlers automatically
+    - You just select input and output - the tool handles the rest
+
+    **Example:**
+    - You'll see "PNG - Portable Network Graphics (image/png)" just once
+    - The converter decides whether to use ImageMagick, FFmpeg, or canvasToBlob
+  </Tab>
+
+  <Tab title="Advanced Mode">
+    ### Advanced Mode
+
+    **For power users** who want control over which tools process their files.
+
+    **Features:**
+    - Shows the same format multiple times if multiple handlers support it
+    - Each entry shows which handler will process it
+    - Orange highlight color indicates advanced mode
+    - Full control over conversion pipeline
+
+    **How it works:**
+    - You explicitly choose which handler processes your file
+    - Useful when you know a specific tool gives better results
+    - Shows format with handler name: "PNG - Portable Network Graphics (image/png) ImageMagick"
+
+    **Example:**
+    - You might see PNG listed 3 times: one for canvasToBlob, one for ImageMagick, one for FFmpeg
+    - You can choose which tool to use based on your needs
+
+    **Toggle:** Click the "Advanced mode" button at the top to switch modes.
+  </Tab>
+</Tabs>
+
+## Conversion Process
+
+### Step-by-Step Conversion
+
+1. **Select your file** using any of the three methods above
+2. **Verify the input format** - it should auto-select, or search if needed
+3. **Choose your output format** from the right/bottom list
+4. **Click the Convert button** - it will light up when both formats are selected
+5. **Wait for processing** - a popup will show the conversion progress
+6. **Download your file** - it will automatically download when complete
+
+### What Happens During Conversion
+
+<Steps>
+  <Step title="Route Finding">
+    The converter searches for the best path between your input and output formats. Sometimes this requires multiple intermediate conversions.
+
+    **Example:** Converting AVI to PDF might route through: `AVI → PNG → PDF`
+  </Step>
+
+  <Step title="Processing">
+    Your file is processed through each handler in the conversion path. A popup shows the current route being attempted:
+
+    ```
+    Finding conversion route...
+    Trying mp4 → png → pdf...
+    ```
+  </Step>
+
+  <Step title="Fallback Handling">
+    If a conversion route fails, the tool automatically tries alternative paths. Dead-end routes are marked and avoided in subsequent attempts.
+  </Step>
+
+  <Step title="Download">
+    Once conversion succeeds, your file automatically downloads. The popup shows the successful route used.
+  </Step>
+</Steps>
+
+### Understanding Conversion Routes
+
+Convert to it! uses a **graph traversal algorithm** to find conversion paths:
+
+- **Direct conversion:** If a handler supports both formats directly (e.g., PNG → JPEG via ImageMagick)
+- **Multi-step conversion:** If no direct route exists, multiple handlers chain together
+- **Intelligent routing:** Failed paths are remembered and avoided
+
+<Warning>
+Some conversions may take longer than others, especially:
+- Large video files
+- Complex multi-step routes
+- First-time handler initialization
+</Warning>
+
+## Multiple File Conversion
+
+You can convert multiple files at once:
+
+1. Select multiple files of the **same type** when browsing
+2. All files will be converted using the same route
+3. Each output file downloads individually
+4. Files are sorted alphabetically by name
+
+<Note>
+The interface shows: `filename.ext ... and X more` when multiple files are selected.
+</Note>
+
+## Format Caching
+
+The first time you load Convert to it!, it builds a list of supported formats:
+
+- This process can take 30-60 seconds on first load
+- A "Built initial format list" message appears in the browser console when complete
+- The cache persists in your browser for faster subsequent loads
+
+**For developers:** Use `printSupportedFormatCache()` in the console to export cache data.
+
+## Privacy and Security
+
+<AccordionGroup>
+  <Accordion title="Where are my files processed?">
+    **100% locally in your browser.** Your files never leave your computer.
+
+    - All conversion happens using WebAssembly and JavaScript in your browser
+    - No server uploads required
+    - No network requests for file data
+    - Complete privacy and security
+  </Accordion>
+
+  <Accordion title="What data is collected?">
+    Convert to it! does not collect or transmit your files or file data. Standard web analytics may track page visits, but your actual file content remains completely private.
+  </Accordion>
+
+  <Accordion title="Can I use this offline?">
+    Once the page is loaded and all handlers are initialized, many conversions can work offline. However, first-time handler loading requires an internet connection to download WebAssembly modules and dependencies.
+  </Accordion>
+</AccordionGroup>
+
+## Tips for Best Results
+
+<CardGroup cols={2}>
+  <Card title="Use Simple Mode" icon="toggle-on">
+    Let the converter find the best route automatically. Advanced mode is only needed for specific handler control.
+  </Card>
+
+  <Card title="Check File Extensions" icon="file-check">
+    If auto-detection fails, ensure your file has the correct extension that matches its actual format.
+  </Card>
+
+  <Card title="Be Patient" icon="clock">
+    Some conversions, especially video processing, can take several minutes depending on file size.
+  </Card>
+
+  <Card title="Try Alternative Routes" icon="route">
+    If a conversion fails, try selecting a different intermediate format manually (in advanced mode).
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Supported Formats" icon="list" href="/usage/supported-formats">
+    View the complete list of supported file formats and categories
+  </Card>
+
+  <Card title="Troubleshooting" icon="wrench" href="/usage/troubleshooting">
+    Get help with common issues and error messages
+  </Card>
+</CardGroup>

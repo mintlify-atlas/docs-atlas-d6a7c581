@@ -1,80 +1,247 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Start converting files in seconds with Convert to it!
 ---
 
-## Get started in three steps
+# Quick Start
 
-Get your documentation site running locally and make your first customization.
+Get started with Convert to it! in under a minute. No account, no installation, just open and convert.
 
-### Step 1: Set up your local environment
+## Using the Web App
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+<Steps>
+  <Step title="Open Convert to it!">
+    Navigate to [convert.to.it](https://convert.to.it/) in your web browser.
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    <Info>
+      For best performance, use a modern browser like Chrome, Firefox, or Edge. The tool uses WebAssembly which requires recent browser versions.
+    </Info>
+  </Step>
+
+  <Step title="Add Your File">
+    You have two options:
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+    **Option 1: Click to browse**
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    Click the big blue box labeled "Click to add your file" to open the file picker.
+    
+    **Option 2: Drag and drop**
+    
+    Simply drag your file from your file explorer and drop it anywhere on the window.
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    ```html
+    <!-- The file input area from index.html -->
+    <div id="file-area">
+      <h2>Click to add your file</h2>
+      <p id="drop-hint-text">or drag and drop it here</p>
+    </div>
+    ```
+  </Step>
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+  <Step title="Select Input Format">
+    The tool will **automatically detect** your file's format based on:
+    - File extension
+    - MIME type
+    - Binary signatures
+    
+    If the format wasn't detected automatically, you can:
+    - Search for your format in the "Convert from:" list
+    - Scroll through available input formats
+    
+    <Note>
+      If your format isn't listed, it may not be supported yet. Check the [GitHub issues](https://github.com/p2r3/convert/issues) or consider contributing support for it.
+    </Note>
+  </Step>
 
-### Step 3: Go live
+  <Step title="Choose Output Format">
+    Select your desired output format from the "Convert to:" list.
+    
+    **On desktop:** The output format list is on the right side.
+    
+    **On mobile:** The output format list is below the input format.
+    
+    Use the search box to quickly find specific formats:
+    
+    ```html
+    <input type="text" id="search-to" class="search" placeholder="Search">
+    ```
+    
+    <Info>
+      Not all conversions are direct. Convert to it! uses a smart graph traversal algorithm to find conversion paths, even chaining multiple converters if needed.
+    </Info>
+  </Step>
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+  <Step title="Convert!">
+    Click the **Convert** button at the bottom of the page.
+    
+    The tool will:
+    1. Load necessary conversion tools (FFmpeg, ImageMagick, etc.)
+    2. Process your file entirely in your browser
+    3. Generate the output file
+    
+    <Note>
+      First-time conversions may take longer as WebAssembly modules are loaded and cached. Subsequent conversions will be much faster.
+    </Note>
+  </Step>
 
-## Next steps
+  <Step title="Download Your File">
+    Once conversion completes, your browser will automatically download the converted file.
+    
+    The output filename will be your original filename with the new extension.
+  </Step>
+</Steps>
 
-Now that you have your docs running, explore these key features:
+## Example Conversions
+
+Here are some common conversion scenarios:
+
+### Image Format Conversion
+
+<CodeGroup>
+```text PNG to JPEG
+1. Upload: photo.png
+2. From: PNG (auto-detected)
+3. To: JPEG
+4. Download: photo.jpg
+```
+
+```text SVG to PNG
+1. Upload: logo.svg
+2. From: SVG (auto-detected)
+3. To: PNG
+4. Download: logo.png
+```
+</CodeGroup>
+
+### Video Conversion
+
+```text AVI to MP4
+1. Upload: movie.avi
+2. From: AVI (auto-detected)
+3. To: MP4
+4. Download: movie.mp4
+```
+
+### Document Conversion
+
+```text Markdown to PDF
+1. Upload: document.md
+2. From: Markdown (auto-detected)
+3. To: PDF
+4. Download: document.pdf
+```
+
+### Cross-Medium Conversion
+
+```text Video to PDF
+1. Upload: clip.mp4
+2. From: MP4 (auto-detected)
+3. To: PDF (extracts frames)
+4. Download: clip.pdf
+```
+
+## Advanced Mode
+
+Click the **Advanced mode** button in the side panel to access additional options:
+
+```html
+<div id="side-panel">
+  <button id="mode-button">Advanced mode</button>
+</div>
+```
+
+Advanced mode provides:
+- Additional conversion parameters
+- Batch processing options
+- Format-specific settings
+
+## Tips for Best Results
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Be Patient" icon="clock">
+    Complex conversions (especially video) can take time. The tool will show progress indicators.
+  </Card>
+  
+  <Card title="Try Different Paths" icon="route">
+    If a direct conversion doesn't work as expected, try converting to an intermediate format first.
+  </Card>
+  
+  <Card title="Check File Size" icon="file">
+    Very large files may take significant time to process since everything runs in your browser.
+  </Card>
+  
+  <Card title="Use Modern Browsers" icon="browser">
+    Chrome, Firefox, and Edge provide the best WebAssembly performance.
+  </Card>
 </CardGroup>
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+## Troubleshooting
+
+### Format Not Auto-Detected
+
+If your input format wasn't automatically detected:
+1. Check if the file extension is correct
+2. Try renaming the file with the correct extension
+3. Manually select the format from the "Convert from:" list
+
+### Conversion Failed
+
+If a conversion fails:
+1. Check the browser console for error messages
+2. Try a different output format
+3. Ensure your file isn't corrupted
+4. Try converting to an intermediate format first
+
+### Slow Performance
+
+If conversions are slow:
+1. Close other browser tabs to free up memory
+2. Wait for initial tool loading (only happens once)
+3. Consider using the desktop app for better performance
+
+### Output Not as Expected
+
+<Info>
+  Remember: Convert to it! will always try to produce *some* output, even for unusual conversion pairs. The result may not always be what you expected, but it will attempt to extract or transform the data in a meaningful way.
+</Info>
+
+## Self-Hosting
+
+Want to run Convert to it! locally? See the [deployment guide](https://github.com/p2r3/convert#deployment) in the README.
+
+### Local Development
+
+```bash
+# Clone with submodules
+git clone --recursive https://github.com/p2r3/convert
+
+# Install Bun
+curl -fsSL https://bun.sh/install | bash
+
+# Install dependencies
+bun install
+
+# Start development server
+bunx vite
+```
+
+### Docker Deployment
+
+```bash
+# Using prebuilt image
+docker compose -f docker/docker-compose.yml up -d
+
+# Access at http://localhost:8080/convert/
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Explore Features" href="/features" icon="sparkles">
+    Learn about all the capabilities of Convert to it!
+  </Card>
+  
+  <Card title="Contribute" href="https://github.com/p2r3/convert" icon="github">
+    Add support for new formats or improve existing handlers
+  </Card>
+</CardGroup>

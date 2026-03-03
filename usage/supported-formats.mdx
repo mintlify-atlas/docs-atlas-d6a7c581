@@ -1,0 +1,565 @@
+---
+title: Supported Formats
+description: Complete list of file formats supported by Convert to it!
+---
+
+Convert to it! supports a wide range of file formats across multiple categories. This page lists all formats defined in the codebase, along with their technical details.
+
+<Note>
+The actual conversion capabilities depend on the handlers available. Not all format pairs can be converted directly - the tool uses multi-step routing to bridge gaps.
+</Note>
+
+## Image Formats
+
+Raster and bitmap image formats for photography, graphics, and visual content.
+
+<AccordionGroup>
+  <Accordion title="PNG - Portable Network Graphics">
+    **Extension:** `.png`  
+    **MIME Type:** `image/png`  
+    **Category:** Image
+
+    Lossless raster image format with transparency support. Ideal for graphics, screenshots, and images requiring transparency.
+
+    **Supported by:** canvasToBlob, ImageMagick, FFmpeg, and more
+  </Accordion>
+
+  <Accordion title="JPEG - Joint Photographic Experts Group JFIF">
+    **Extension:** `.jpg`  
+    **MIME Type:** `image/jpeg`  
+    **Category:** Image
+
+    Lossy compression format optimized for photographs. Excellent for photographic content where small file size is important.
+
+    **Supported by:** canvasToBlob, ImageMagick, FFmpeg
+  </Accordion>
+
+  <Accordion title="WebP">
+    **Extension:** `.webp`  
+    **MIME Type:** `image/webp`  
+    **Category:** Image
+
+    Modern image format with superior compression. Supports both lossy and lossless compression with transparency.
+
+    **Supported by:** canvasToBlob, ImageMagick, FFmpeg
+  </Accordion>
+
+  <Accordion title="GIF - CompuServe Graphics Interchange Format">
+    **Extension:** `.gif`  
+    **MIME Type:** `image/gif`  
+    **Category:** Image, Video
+
+    Supports animation and limited color palette. Popular for simple animations and graphics.
+
+    **Supported by:** canvasToBlob, ImageMagick, FFmpeg
+  </Accordion>
+
+  <Accordion title="BMP - Microsoft Windows Bitmap Image">
+    **Extension:** `.bmp`  
+    **MIME Type:** `image/bmp`  
+    **Category:** Image
+
+    Uncompressed raster format. Large file size but universal compatibility.
+
+    **Supported by:** canvasToBlob, ImageMagick
+  </Accordion>
+
+  <Accordion title="TIFF - Tagged Image File Format">
+    **Extension:** `.tiff`  
+    **MIME Type:** `image/tiff`  
+    **Category:** Image
+
+    Flexible format supporting multiple compression methods. Common in professional photography and scanning.
+
+    **Supported by:** ImageMagick
+  </Accordion>
+</AccordionGroup>
+
+## Vector Formats
+
+Scalable graphics formats that maintain quality at any size.
+
+<AccordionGroup>
+  <Accordion title="SVG - Scalable Vector Graphics">
+    **Extension:** `.svg`  
+    **MIME Type:** `image/svg+xml`  
+    **Category:** Image, Vector, Document
+
+    XML-based vector format. Infinitely scalable without quality loss. Can be converted to raster images or treated as XML data.
+
+    **Supported by:** svgTrace, svgForeignObject, canvasToBlob
+  </Accordion>
+</AccordionGroup>
+
+## Video Formats
+
+Motion picture and animation formats.
+
+<AccordionGroup>
+  <Accordion title="MP4 - MPEG-4 Part 14">
+    **Extension:** `.mp4`  
+    **MIME Type:** `video/mp4`  
+    **Category:** Video
+
+    Universal video container format with excellent compression and compatibility.
+
+    **Supported by:** FFmpeg
+  </Accordion>
+
+  <Accordion title="GIF - Animated">
+    **Extension:** `.gif`  
+    **MIME Type:** `image/gif`  
+    **Category:** Image, Video
+
+    Simple animation format with limited colors. See Image Formats section for details.
+
+    **Supported by:** FFmpeg, ImageMagick
+  </Accordion>
+</AccordionGroup>
+
+## Audio Formats
+
+Sound and music file formats.
+
+<AccordionGroup>
+  <Accordion title="MP3 - MP3 Audio">
+    **Extension:** `.mp3`  
+    **MIME Type:** `audio/mpeg`  
+    **Category:** Audio
+
+    Lossy audio compression format. Industry standard for music distribution.
+
+    **Supported by:** FFmpeg
+  </Accordion>
+
+  <Accordion title="WAV - Waveform Audio File Format">
+    **Extension:** `.wav`  
+    **MIME Type:** `audio/wav`  
+    **Category:** Audio
+
+    Uncompressed audio format. High quality but large file size.
+
+    **Supported by:** FFmpeg, meyda
+  </Accordion>
+
+  <Accordion title="OGG - Ogg Audio">
+    **Extension:** `.ogg`  
+    **MIME Type:** `audio/ogg`  
+    **Category:** Audio
+
+    Open-source lossy audio format. Better quality than MP3 at similar bitrates.
+
+    **Supported by:** FFmpeg
+  </Accordion>
+
+  <Accordion title="FLAC - Free Lossless Audio Codec">
+    **Extension:** `.flac`  
+    **MIME Type:** `audio/flac`  
+    **Category:** Audio
+
+    Lossless audio compression. Preserves perfect audio quality while reducing file size.
+
+    **Supported by:** FFmpeg
+  </Accordion>
+</AccordionGroup>
+
+## Document Formats
+
+Text documents, presentations, and portable document formats.
+
+<AccordionGroup>
+  <Accordion title="PDF - Portable Document Format">
+    **Extension:** `.pdf`  
+    **MIME Type:** `application/pdf`  
+    **Category:** Document
+
+    Universal document format preserving layout and formatting. Can contain text, images, and vector graphics.
+
+    **Supported by:** pdftoimg, pandoc
+  </Accordion>
+
+  <Accordion title="DOCX - WordprocessingML Document">
+    **Extension:** `.docx`  
+    **MIME Type:** `application/vnd.openxmlformats-officedocument.wordprocessingml.document`  
+    **Category:** Document
+
+    Microsoft Word document format (Office Open XML).
+
+    **Supported by:** pandoc
+  </Accordion>
+
+  <Accordion title="PPTX - PresentationML Presentation">
+    **Extension:** `.pptx`  
+    **MIME Type:** `application/vnd.openxmlformats-officedocument.presentationml.presentation`  
+    **Category:** Presentation, Document
+
+    Microsoft PowerPoint presentation format (Office Open XML).
+
+    **Supported by:** pandoc
+  </Accordion>
+
+  <Accordion title="HTML - Hypertext Markup Language">
+    **Extension:** `.html`  
+    **MIME Type:** `text/html`  
+    **Category:** Document, Text
+
+    Web page markup language. Can embed images, videos, and other content.
+
+    **Supported by:** htmlEmbed, svgForeignObject, pandoc
+  </Accordion>
+
+  <Accordion title="Markdown - Markdown Document">
+    **Extension:** `.markdown`  
+    **MIME Type:** `text/markdown`  
+    **Category:** Document, Text
+
+    Lightweight markup language for formatted text documents.
+
+    **Supported by:** pandoc
+  </Accordion>
+
+  <Accordion title="SVG - Scalable Vector Graphics (as Document)">
+    **Extension:** `.svg`  
+    **MIME Type:** `image/svg+xml`  
+    **Category:** Image, Vector, Document
+
+    When treated as a document, SVG can be parsed as XML. See Vector Formats for image usage.
+
+    **Supported by:** svgForeignObject
+  </Accordion>
+</AccordionGroup>
+
+## Spreadsheet Formats
+
+Tabular data and spreadsheet formats.
+
+<AccordionGroup>
+  <Accordion title="XLSX - SpreadsheetML Workbook">
+    **Extension:** `.xlsx`  
+    **MIME Type:** `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`  
+    **Category:** Spreadsheet, Document
+
+    Microsoft Excel spreadsheet format (Office Open XML).
+
+    **Supported by:** pandoc
+  </Accordion>
+</AccordionGroup>
+
+## Data Formats
+
+Structured data interchange formats.
+
+<AccordionGroup>
+  <Accordion title="JSON - JavaScript Object Notation">
+    **Extension:** `.json`  
+    **MIME Type:** `application/json`  
+    **Category:** Data
+
+    Lightweight data interchange format. Human-readable and machine-parseable.
+
+    **Supported by:** fromJson, toJson handlers
+  </Accordion>
+
+  <Accordion title="XML - Extensible Markup Language">
+    **Extension:** `.xml`  
+    **MIME Type:** `application/xml`  
+    **Category:** Data
+
+    Markup language for encoding documents in machine-readable format.
+
+    **Supported by:** Various handlers depending on context
+  </Accordion>
+
+  <Accordion title="YAML - YAML Ain't Markup Language">
+    **Extension:** `.yml`  
+    **MIME Type:** `application/yaml`  
+    **Category:** Data
+
+    Human-friendly data serialization format.
+  </Accordion>
+
+  <Accordion title="CSV - Comma Separated Values">
+    **Extension:** `.csv`  
+    **MIME Type:** `text/csv`  
+    **Category:** Data
+
+    Simple tabular data format using comma delimiters.
+  </Accordion>
+</AccordionGroup>
+
+## Text & Code Formats
+
+Plain text and source code formats.
+
+<AccordionGroup>
+  <Accordion title="TXT - Plain Text">
+    **Extension:** `.txt`  
+    **MIME Type:** `text/plain`  
+    **Category:** Text
+
+    Simple unformatted text. Universal compatibility.
+
+    **Supported by:** renameTxt, textEncoding, and various handlers
+  </Accordion>
+
+  <Accordion title="Python Script">
+    **Extension:** `.py`  
+    **MIME Type:** `text/x-python`  
+    **Category:** Code
+
+    Python programming language source code.
+
+    **Supported by:** pyTurtle, txtToPy
+  </Accordion>
+
+  <Accordion title="Batch - Windows Batch File">
+    **Extension:** `.bat`  
+    **MIME Type:** `text/windows-batch`  
+    **Category:** Text
+
+    Windows command script.
+
+    **Supported by:** batch, batToExe, exeToBat
+  </Accordion>
+
+  <Accordion title="Shell Script">
+    **Extension:** `.sh`  
+    **MIME Type:** `application/x-sh`  
+    **Category:** Text
+
+    Unix/Linux shell script.
+
+    **Supported by:** textToShell
+  </Accordion>
+</AccordionGroup>
+
+## Archive Formats
+
+File compression and archiving formats.
+
+<AccordionGroup>
+  <Accordion title="ZIP - ZIP Archive">
+    **Extension:** `.zip`  
+    **MIME Type:** `application/zip`  
+    **Category:** Archive
+
+    Universal archive format with compression.
+
+    **Supported by:** jszip, renameZip, peToZip
+  </Accordion>
+</AccordionGroup>
+
+## Font Formats
+
+Typeface and font file formats.
+
+<AccordionGroup>
+  <Accordion title="TTF - TrueType Font">
+    **Extension:** `.ttf`  
+    **MIME Type:** `font/ttf`  
+    **Category:** Font
+
+    Widely-used font format with excellent compatibility.
+
+    **Supported by:** font handler
+  </Accordion>
+
+  <Accordion title="OTF - OpenType Font">
+    **Extension:** `.otf`  
+    **MIME Type:** `font/otf`  
+    **Category:** Font
+
+    Advanced font format supporting complex typography.
+
+    **Supported by:** font handler
+  </Accordion>
+
+  <Accordion title="WOFF - Web Open Font Format">
+    **Extension:** `.woff`  
+    **MIME Type:** `font/woff`  
+    **Category:** Font
+
+    Compressed font format optimized for web use.
+
+    **Supported by:** font handler
+  </Accordion>
+
+  <Accordion title="WOFF2 - Web Open Font Format 2.0">
+    **Extension:** `.woff2`  
+    **MIME Type:** `font/woff2`  
+    **Category:** Font
+
+    Improved web font format with better compression.
+
+    **Supported by:** font handler
+  </Accordion>
+</AccordionGroup>
+
+## Music Notation Formats
+
+Formats for musical scores and notation.
+
+<AccordionGroup>
+  <Accordion title="MusicXML">
+    **Extension:** `.musicxml`  
+    **MIME Type:** `application/vnd.recordare.musicxml+xml`  
+    **Category:** Document
+
+    Standard format for exchanging digital sheet music.
+
+    **Supported by:** vexflow
+  </Accordion>
+
+  <Accordion title="MXL - MusicXML Compressed">
+    **Extension:** `.mxl`  
+    **MIME Type:** `application/vnd.recordare.musicxml`  
+    **Category:** Document
+
+    Compressed version of MusicXML.
+
+    **Supported by:** vexflow
+  </Accordion>
+</AccordionGroup>
+
+## Executable Formats
+
+<AccordionGroup>
+  <Accordion title="EXE - Windows Portable Executable">
+    **Extension:** `.exe`  
+    **MIME Type:** `application/vnd.microsoft.portable-executable`  
+    **Category:** Code
+
+    Windows executable program format.
+
+    **Supported by:** batToExe, exeToBat, peToZip
+  </Accordion>
+</AccordionGroup>
+
+## Conversion Handlers
+
+Behind the scenes, Convert to it! uses over 60 specialized handlers to perform conversions:
+
+<Tabs>
+  <Tab title="Popular Handlers">
+    - **FFmpeg** - Video, audio, and multimedia conversion
+    - **ImageMagick** - Comprehensive image processing
+    - **Pandoc** - Document format conversion
+    - **canvasToBlob** - Browser-native image conversion
+    - **pdftoimg** - PDF to image conversion
+  </Tab>
+
+  <Tab title="Specialized Handlers">
+    - **svgTrace** - Bitmap to vector tracing
+    - **font** - Font format conversion (TTF, OTF, WOFF)
+    - **meyda** - Audio analysis and feature extraction
+    - **midi** - MIDI codec and synthesis
+    - **libopenmpt** - Module music file playback
+    - **vexflow** - Music notation rendering
+  </Tab>
+
+  <Tab title="Game & Asset Handlers">
+    - **aseprite** - Aseprite sprite files
+    - **mcmap** - Minecraft map files
+    - **mcSchematic** - Minecraft schematics
+    - **nbt** - Minecraft NBT data
+    - **bsor** - Beat Saber replay files
+    - **wad** - WAD archive files
+    - **terrariawld** - Terraria world files
+    - **n64rom** - Nintendo 64 ROM files
+  </Tab>
+
+  <Tab title="Format-Specific">
+    - **qoi-fu** - QOI image format
+    - **qoa-fu** - QOA audio format
+    - **vtf** - Valve Texture Format
+    - **icns** - Apple Icon Image format
+    - **cgbi-to-png** - Apple CgBI PNG to standard PNG
+    - **bson** - Binary JSON
+    - **sqlite** - SQLite database files
+  </Tab>
+</Tabs>
+
+## Format Categories
+
+Formats are organized into the following categories:
+
+<CardGroup cols={3}>
+  <Card title="Image" icon="image">
+    Raster images: PNG, JPEG, WebP, GIF, BMP, TIFF
+  </Card>
+
+  <Card title="Vector" icon="bezier-curve">
+    Scalable graphics: SVG
+  </Card>
+
+  <Card title="Video" icon="video">
+    Motion pictures: MP4, GIF (animated)
+  </Card>
+
+  <Card title="Audio" icon="waveform">
+    Sound files: MP3, WAV, OGG, FLAC
+  </Card>
+
+  <Card title="Document" icon="file-lines">
+    Documents: PDF, DOCX, PPTX, HTML, Markdown, SVG
+  </Card>
+
+  <Card title="Data" icon="database">
+    Structured data: JSON, XML, YAML, CSV
+  </Card>
+
+  <Card title="Text" icon="file-text">
+    Plain text: TXT, Batch, Shell scripts
+  </Card>
+
+  <Card title="Code" icon="code">
+    Source code: Python, EXE
+  </Card>
+
+  <Card title="Archive" icon="file-zipper">
+    Compressed files: ZIP
+  </Card>
+
+  <Card title="Spreadsheet" icon="table">
+    Tabular data: XLSX
+  </Card>
+
+  <Card title="Presentation" icon="presentation-screen">
+    Slide decks: PPTX
+  </Card>
+
+  <Card title="Font" icon="font">
+    Typefaces: TTF, OTF, WOFF, WOFF2
+  </Card>
+</CardGroup>
+
+<Warning>
+Not all format combinations can be converted. The tool attempts to find a route through intermediate formats, but some conversions may not be logically possible (though Convert to it! will try its best!).
+</Warning>
+
+## Cross-Category Conversions
+
+One of Convert to it!'s unique features is the ability to convert between different media types:
+
+- **Video to Image:** Extract frames from videos as PNG/JPEG
+- **Image to PDF:** Embed images in PDF documents
+- **Audio to Image:** Visualize audio waveforms as images
+- **Text to Executable:** Convert batch scripts to EXE files
+- **Font to Image:** Render font glyphs as images
+- **Almost anything to HTML:** Embed content in HTML pages
+
+<Tip>
+The tool is designed to "just work" - even if a conversion seems unusual, give it a try! The graph traversal algorithm often finds creative routes between formats.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Using the Converter" icon="play" href="/usage/using-converter">
+    Learn how to perform conversions step-by-step
+  </Card>
+
+  <Card title="Troubleshooting" icon="wrench" href="/usage/troubleshooting">
+    Get help when conversions don't work as expected
+  </Card>
+</CardGroup>

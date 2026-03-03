@@ -1,0 +1,540 @@
+---
+title: Troubleshooting
+description: Common issues and solutions for Convert to it!
+---
+
+Running into problems? This guide covers common issues and how to resolve them.
+
+## Common Issues
+
+### File Format Not Auto-Detected
+
+**Problem:** After selecting a file, no input format is automatically selected.
+
+<AccordionGroup>
+  <Accordion title="Solution 1: Check File Extension">
+    The file might have an incorrect or missing extension.
+
+    **Steps:**
+    1. Check that your file has the correct extension (e.g., `.png`, `.mp4`)
+    2. If the extension is missing or wrong, rename the file
+    3. Re-upload the file to Convert to it!
+
+    **Example:** A PNG file named `image` without an extension won't be detected. Rename it to `image.png`.
+  </Accordion>
+
+  <Accordion title="Solution 2: Manual Format Selection">
+    Use the search box to find and select your format manually.
+
+    **Steps:**
+    1. Look at your file's extension (e.g., `.docx`, `.svg`)
+    2. Type the extension or format name in the input search box
+    3. Click the matching format from the filtered list
+
+    This works even when auto-detection fails.
+  </Accordion>
+
+  <Accordion title="Solution 3: MIME Type Issues">
+    Your operating system might be reporting an incorrect MIME type.
+
+    **Steps:**
+    1. Try opening the file in its native application first
+    2. Re-save it from that application
+    3. Upload the newly saved file
+
+    This often fixes MIME type mismatches.
+  </Accordion>
+</AccordionGroup>
+
+### "All Input Files Must Be of the Same Type" Error
+
+**Problem:** You selected multiple files but got an error message.
+
+**Solution:**
+
+<Steps>
+  <Step title="Verify File Types">
+    All selected files must have the same MIME type and format.
+
+    **Incorrect:** Selecting `image.png` and `video.mp4` together  
+    **Correct:** Selecting `image1.png` and `image2.png` together
+  </Step>
+
+  <Step title="Convert Files Separately">
+    If you need to convert different file types:
+    1. Convert each file type in separate batches
+    2. Select all PNG files first, convert them
+    3. Then select all MP4 files, convert them
+  </Step>
+
+  <Step title="Check Hidden Extensions">
+    Sometimes files that look the same aren't:
+    - `document.docx` and `document.doc` are different formats
+    - `image.jpg` and `image.jpeg` should work together (same MIME type)
+  </Step>
+</Steps>
+
+### Conversion Fails - "Failed to Find Conversion Route"
+
+**Problem:** After clicking Convert, you get an alert saying no route was found.
+
+<AccordionGroup>
+  <Accordion title="Cause 1: No Handler Supports the Conversion">
+    The specific input/output combination might not have a working route.
+
+    **Solutions:**
+    - Try converting to an intermediate format first (e.g., if PNG → DOCX fails, try PNG → PDF → DOCX)
+    - Check the [Supported Formats](/usage/supported-formats) page for compatible formats
+    - In Advanced mode, try different handlers for the same format
+  </Accordion>
+
+  <Accordion title="Cause 2: Handler Initialization Failed">
+    A required handler might have failed to load.
+
+    **Solutions:**
+    - **Check browser console** (F12 → Console tab) for error messages
+    - **Refresh the page** to reinitialize all handlers
+    - **Clear browser cache** and reload
+    - **Try a different browser** - Chrome, Firefox, and Edge are recommended
+  </Accordion>
+
+  <Accordion title="Cause 3: All Routes Hit Dead Ends">
+    The converter tried multiple routes but they all failed.
+
+    **Solutions:**
+    - Check the browser console for specific error messages
+    - Try converting a smaller or simpler file
+    - Switch between Simple and Advanced mode
+    - File might be corrupted - try re-creating or re-exporting it
+  </Accordion>
+</AccordionGroup>
+
+### Conversion Takes Too Long
+
+**Problem:** The conversion has been running for several minutes without completing.
+
+**Expected Times:**
+- Small images (< 5MB): 1-5 seconds
+- Large images (> 20MB): 10-30 seconds  
+- Short videos (< 1 min): 30-60 seconds
+- Long videos (> 5 min): 2-10 minutes
+- Complex multi-step routes: Add 5-30 seconds per step
+
+<AccordionGroup>
+  <Accordion title="Solution 1: Be Patient with Large Files">
+    Video and audio processing can be slow, especially:
+    - Long videos (> 5 minutes)
+    - High-resolution videos (4K, 8K)
+    - Multi-step conversion routes
+
+    **What to do:**
+    - Wait for the process to complete
+    - Check the popup for route progress
+    - Don't close or refresh the browser
+  </Accordion>
+
+  <Accordion title="Solution 2: Optimize Your File">
+    Reduce file size before converting:
+
+    **For Images:**
+    - Resize to a smaller resolution first
+    - Reduce quality/compression
+
+    **For Videos:**
+    - Trim to a shorter duration
+    - Lower the resolution (1080p → 720p)
+    - Reduce frame rate if possible
+  </Accordion>
+
+  <Accordion title="Solution 3: Try Direct Conversion">
+    In Advanced mode, select handlers that support direct conversion:
+
+    - Avoid multi-step routes if possible
+    - Choose handlers known for the specific conversion (e.g., FFmpeg for video)
+  </Accordion>
+</AccordionGroup>
+
+### Output File is Empty or Corrupted
+
+**Problem:** The conversion completes but the downloaded file is broken or empty.
+
+<AccordionGroup>
+  <Accordion title="Solution 1: Verify Input File">
+    Make sure your input file is valid:
+
+    **Steps:**
+    1. Open the original file in its native application
+    2. If it won't open, the file is corrupted
+    3. Try re-downloading or re-creating the file
+    4. Try a different input file to test
+  </Accordion>
+
+  <Accordion title="Solution 2: Try Different Output Format">
+    Some conversions might not work as expected:
+
+    - Try converting to a different output format first
+    - Use an intermediate format (e.g., PNG → PDF instead of PNG → DOCX)
+    - Check if the conversion is logically possible
+  </Accordion>
+
+  <Accordion title="Solution 3: Check Browser Compatibility">
+    Some handlers work better in certain browsers:
+
+    **Recommended browsers:**
+    - Chrome (best compatibility)
+    - Firefox
+    - Edge
+
+    **Less reliable:**
+    - Safari (limited WebAssembly support)
+    - Mobile browsers (memory constraints)
+  </Accordion>
+</AccordionGroup>
+
+### First Load is Very Slow
+
+**Problem:** The page takes 30-60 seconds to load the first time.
+
+**This is expected behavior!**
+
+<Info>
+On first load, Convert to it! builds a format list by querying all 60+ handlers. This includes:
+- Initializing WebAssembly modules
+- Loading dependencies
+- Building the conversion graph
+
+Subsequent loads use cached data and are much faster.
+</Info>
+
+**To speed up future loads:**
+
+1. **Keep the cache:** Don't clear browser data for convert.to.it
+2. **For developers:** Use `printSupportedFormatCache()` in the console and save output to `cache.json`
+
+### Browser Console Shows Errors
+
+**Problem:** Red error messages appear in the browser console (F12).
+
+<AccordionGroup>
+  <Accordion title="Cache miss for formats of handler">
+    **Severity:** Warning (not critical)
+
+    This is normal on first load. The handler will initialize and cache its formats.
+
+    **Action:** No action needed unless it persists after page refresh.
+  </Accordion>
+
+  <Accordion title="Handler X doesn't support any formats">
+    **Severity:** Warning
+
+    A handler failed to initialize properly.
+
+    **Solutions:**
+    - Refresh the page
+    - Check internet connection (some handlers load external resources)
+    - Try a different browser
+    - The converter can still work with other handlers
+  </Accordion>
+
+  <Accordion title="Output is empty">
+    **Severity:** Error
+
+    The handler produced no output for this conversion.
+
+    **Solutions:**
+    - The route is marked as a dead end and alternative routes are tried
+    - If all routes fail, try a different intermediate format
+    - Check if the input file is valid
+  </Accordion>
+
+  <Accordion title="WebAssembly or MIME type errors">
+    **Severity:** Critical
+
+    Handler initialization failed due to missing dependencies.
+
+    **Solutions:**
+    - Check internet connection
+    - Clear cache and reload
+    - Update your browser to the latest version
+    - Try a different browser (Chrome recommended)
+  </Accordion>
+</AccordionGroup>
+
+## Understanding Conversion Routes
+
+### Multi-Step Routing
+
+Convert to it! uses graph traversal to find conversion paths. Sometimes the route is not obvious:
+
+<CodeGroup>
+```text Direct Route
+PNG → JPEG
+(handled by ImageMagick)
+```
+
+```text Multi-Step Route  
+AVI → PNG → PDF
+(FFmpeg) (htmlEmbed)
+```
+
+```text Complex Route
+MP3 → WAV → Image → PDF → DOCX
+(FFmpeg) (meyda) (pdftoimg) (pandoc)
+```
+</CodeGroup>
+
+<Warning>
+The more steps in a route, the higher the chance of failure. Each step introduces a potential point of failure.
+</Warning>
+
+### Dead Ends and Fallbacks
+
+When a conversion route fails:
+
+1. **Route is marked as dead end** - Won't be tried again this session
+2. **Alternative route is found** - Graph traversal continues
+3. **All routes exhausted** - "Failed to find conversion route" error
+
+You can see attempted routes in the browser console and popup messages.
+
+## Format-Specific Issues
+
+<Tabs>
+  <Tab title="PDF">
+    ### PDF Conversion Issues
+
+    **PDF to Image:**
+    - Multi-page PDFs export as multiple image files
+    - Quality depends on PDF resolution
+    - Some PDFs with complex vector graphics may not render perfectly
+
+    **Image/Video to PDF:**
+    - Resulting PDF embeds the image/video frame
+    - Not searchable or editable text
+    - Large files may take time to process
+  </Tab>
+
+  <Tab title="Video">
+    ### Video Conversion Issues
+
+    **Slow Processing:**
+    - Video conversion uses FFmpeg which is CPU-intensive
+    - Expect 1-10 minutes for longer videos
+    - Browser may become unresponsive during processing
+
+    **Video to Image:**
+    - Extracts a single frame (usually first frame)
+    - For multiple frames, use specialized tools
+
+    **Codec Issues:**
+    - Some video codecs may not be fully supported
+    - Try converting to MP4 first if having issues
+  </Tab>
+
+  <Tab title="Audio">
+    ### Audio Conversion Issues
+
+    **Format Support:**
+    - Most common formats (MP3, WAV, OGG, FLAC) work well
+    - Exotic formats may have limited support
+
+    **Audio to Image:**
+    - Creates waveform visualization
+    - Not a spectrogram (use specialized tools for that)
+
+    **Quality:**
+    - Lossless formats (WAV, FLAC) preserve quality
+    - Lossy formats (MP3, OGG) may degrade on multiple conversions
+  </Tab>
+
+  <Tab title="Documents">
+    ### Document Conversion Issues
+
+    **Layout Preservation:**
+    - Complex layouts may not convert perfectly
+    - Fonts may substitute if not available
+    - Embedded objects may render differently
+
+    **Office Formats (DOCX, XLSX, PPTX):**
+    - Requires pandoc handler
+    - Not all formatting features supported
+    - Test with simple documents first
+
+    **HTML:**
+    - External resources (CSS, images) may not load
+    - JavaScript is not executed
+    - Self-contained HTML works best
+  </Tab>
+
+  <Tab title="Images">
+    ### Image Conversion Issues
+
+    **Transparency:**
+    - PNG, WebP, GIF support transparency
+    - JPEG does not (transparent areas become white/black)
+
+    **Quality Loss:**
+    - JPEG is lossy - avoid multiple conversions
+    - PNG, WebP (lossless mode) preserve quality
+
+    **Large Images:**
+    - Very large images (> 50MB) may be slow
+    - Consider resizing before conversion
+
+    **Color Profiles:**
+    - Color profiles may not be preserved
+    - CMYK images may convert to RGB
+  </Tab>
+</Tabs>
+
+## When to Report a Bug
+
+According to the project guidelines:
+
+<Warning>
+**NOT a bug:** "Converting X to Y doesn't work"
+
+This is expected for unsupported format combinations.
+</Warning>
+
+<Note>
+**IS a bug:** "Converting X to Y works but not how I expected"
+
+If the conversion succeeds but produces unexpected output, that's worth reporting!
+</Note>
+
+### Before Reporting a Bug
+
+<Steps>
+  <Step title="Check Existing Issues">
+    Search the [GitHub Issues](https://github.com/p2r3/convert/issues) to see if it's already reported.
+  </Step>
+
+  <Step title="Gather Information">
+    Collect:
+    - Input file format and size
+    - Output format selected
+    - Browser and version
+    - Console error messages (F12 → Console)
+    - Conversion route shown in popup
+  </Step>
+
+  <Step title="Test Reproducibility">
+    - Try the conversion again
+    - Try with a different input file
+    - Try in a different browser
+    - Note if the issue is consistent
+  </Step>
+
+  <Step title="Submit Bug Report">
+    Include all gathered information in your bug report on GitHub.
+
+    **Good bug report:**
+    > "Converting PNG to PDF produces blank output. Input: 1920x1080 PNG (2MB). Browser: Chrome 120. Console shows 'Output is empty' from htmlEmbed handler. Tested with 3 different PNG files - same result."
+
+    **Bad bug report:**
+    > "PNG to PDF doesn't work"
+  </Step>
+</Steps>
+
+## Requesting New Formats
+
+Want a format added? Read the project's requirements:
+
+<Warning>
+**Simply asking for a format is NOT a valid request!**
+
+Format requests require substantial research and documentation.
+</Warning>
+
+### Valid Format Request Requirements
+
+<Steps>
+  <Step title="Check for Duplicates">
+    - Search existing issues
+    - Verify the format isn't already supported
+    - Check the [Supported Formats](/usage/supported-formats) page
+  </Step>
+
+  <Step title="Explain Expected Behavior">
+    Describe what the conversion should do:
+    - What medium is it (image, audio, video, document)?
+    - How should it convert to/from other formats?
+    - What's the expected output?
+
+    **Example:** "HEIC is an image format that should convert to/from PNG, JPEG like other raster images."
+  </Step>
+
+  <Step title="Provide Implementation References">
+    Link to:
+    - Existing browser-based solutions (if any)
+    - Libraries with compatible licenses (GPL-2.0)
+    - Technical specifications or documentation
+    - Example files for testing
+  </Step>
+</Steps>
+
+## Getting Additional Help
+
+<CardGroup cols={2}>
+  <Card title="GitHub Issues" icon="github" href="https://github.com/p2r3/convert/issues">
+    Report bugs and request features (following guidelines above)
+  </Card>
+
+  <Card title="YouTube Video" icon="youtube" href="https://youtu.be/btUbcsTbVA8">
+    Semi-technical overview of how Convert to it! works
+  </Card>
+
+  <Card title="Source Code" icon="code" href="https://github.com/p2r3/convert">
+    Explore the codebase for technical details
+  </Card>
+
+  <Card title="Using the Converter" icon="book" href="/usage/using-converter">
+    Review the complete usage guide
+  </Card>
+</CardGroup>
+
+## Browser Compatibility
+
+<Tabs>
+  <Tab title="Recommended">
+    ### Fully Supported Browsers
+
+    - **Chrome/Chromium** (latest version)
+    - **Microsoft Edge** (latest version)
+    - **Firefox** (latest version)
+
+    These browsers have excellent WebAssembly support and work with all handlers.
+  </Tab>
+
+  <Tab title="Limited Support">
+    ### Partially Supported Browsers
+
+    - **Safari** (latest version)
+      - Some WebAssembly limitations
+      - Certain handlers may not work
+      - Overall functionality works but with restrictions
+
+    - **Mobile Browsers** (all platforms)
+      - Memory constraints affect large file processing
+      - Slower performance
+      - Some handlers may fail on complex conversions
+  </Tab>
+
+  <Tab title="Not Supported">
+    ### Unsupported Browsers
+
+    - **Internet Explorer** (all versions)
+      - No WebAssembly support
+      - Will not work
+
+    - **Outdated browsers** (> 2 years old)
+      - Missing modern JavaScript features
+      - Security risks
+      - Please update your browser
+  </Tab>
+</Tabs>
+
+<Tip>
+For best results, use the latest version of Chrome or Firefox on a desktop computer with at least 4GB of RAM.
+</Tip>

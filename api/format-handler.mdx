@@ -1,0 +1,239 @@
+---
+title: 'FormatHandler'
+description: 'Interface for converting between file formats'
+icon: 'code'
+---
+
+The `FormatHandler` interface establishes a common contract for converting between file formats. Format handlers are typically wrappers around existing conversion tools.
+
+## Interface Definition
+
+```typescript
+export interface FormatHandler {
+  name: string;
+  supportedFormats?: FileFormat[];
+  supportAnyInput?: boolean;
+  ready: boolean;
+  init: () => Promise<void>;
+  doConvert: (
+    inputFiles: FileData[],
+    inputFormat: FileFormat,
+    outputFormat: FileFormat,
+    args?: string[]
+  ) => Promise<FileData[]>;
+}
+```
+
+## Properties
+
+<ParamField path="name" type="string" required>
+  Name of the tool being wrapped (e.g. "FFmpeg", "ImageMagick", "mcSchematic").
+</ParamField>
+
+<ParamField path="supportedFormats" type="FileFormat[]">
+  List of supported input/output file formats. Each format in this array defines conversion capabilities through the `from` and `to` properties.
+  
+  See [FileFormat](/api/file-format) for the complete type definition.
+</ParamField>
+
+<ParamField path="supportAnyInput" type="boolean" default={false}>
+  Whether the handler supports input of any type. When `true`, conversion using this handler will only be performed if no other direct conversion is found.
+  
+  This is useful for universal handlers that can attempt conversions for any format.
+</ParamField>
+
+<ParamField path="ready" type="boolean" required>
+  Whether the handler is ready for use. Should be set to `true` in the `init()` method.
+  
+  If `true`, the `doConvert()` method is expected to work properly.
+</ParamField>
+
+## Methods
+
+<ResponseField name="init" type="() => Promise<void>" required>
+  Initializes the handler if necessary. This method should:
+  - Load any required resources or dependencies
+  - Populate the `supportedFormats` array
+  - Set `ready` to `true` when initialization is complete
+  
+  **Example:**
+  ```typescript
+  async init() {
+    this.supportedFormats = [
+      {
+        name: "Minecraft Schematic",
+        format: "schematic",
+        extension: "schematic",
+        mime: "application/x-minecraft-schematic",
+        from: true,
+        to: true,
+        internal: "schematic",
+        category: "data",
+        lossless: true
+      }
+    ];
+    this.ready = true;
+  }
+  ```
+</ResponseField>
+
+<ResponseField name="doConvert" type="(inputFiles: FileData[], inputFormat: FileFormat, outputFormat: FileFormat, args?: string[]) => Promise<FileData[]>" required>
+  Performs the actual file conversion.
+  
+  <Expandable title="Parameters">
+    <ParamField path="inputFiles" type="FileData[]" required>
+      Array of input files to convert. Each file contains:
+      - `name`: File name with extension
+      - `bytes`: File contents as Uint8Array
+    </ParamField>
+    
+    <ParamField path="inputFormat" type="FileFormat" required>
+      Input format specification, the same for all input files.
+    </ParamField>
+    
+    <ParamField path="outputFormat" type="FileFormat" required>
+      Output format specification, the same for all output files.
+    </ParamField>
+    
+    <ParamField path="args" type="string[]">
+      Optional arguments as a string array. Can be used to:
+      - Pass additional conversion options
+      - Perform recursion with different settings
+      - Specify tool-specific parameters
+    </ParamField>
+  </Expandable>
+  
+  <Expandable title="Returns">
+    <ResponseField name="return" type="Promise<FileData[]>">
+      Array of converted output files. Each file contains:
+      - `name`: Generated file name with appropriate extension
+      - `bytes`: Converted file contents as Uint8Array
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## FileData Type
+
+```typescript
+export interface FileData {
+  /** File name with extension. */
+  name: string;
+  /**
+   * File contents in bytes.
+   *
+   * **Please note:** Handlers are responsible for ensuring the lifetime
+   * and consistency of this buffer. If you're not sure that your handler
+   * won't modify it, wrap it in `new Uint8Array()`.
+   */
+  readonly bytes: Uint8Array;
+}
+```
+
+<ParamField path="name" type="string" required>
+  File name with extension.
+</ParamField>
+
+<ParamField path="bytes" type="Uint8Array" required>
+  File contents in bytes.
+  
+  <Warning>
+    Handlers are responsible for ensuring the lifetime and consistency of this buffer. If you're not sure that your handler won't modify it, wrap it in `new Uint8Array()`.
+  </Warning>
+</ParamField>
+
+## Usage Example
+
+Here's a complete example of a format handler implementation:
+
+```typescript
+import type { FileData, FileFormat, FormatHandler } from "src/FormatHandler";
+
+class MyCustomHandler implements FormatHandler {
+  public name: string = "MyCustom";
+  public supportedFormats?: FileFormat[];
+  public ready: boolean = false;
+
+  async init() {
+    this.supportedFormats = [
+      {
+        name: "Custom Format A",
+        format: "custom-a",
+        extension: "ca",
+        mime: "application/x-custom-a",
+        from: true,
+        to: false,
+        internal: "custom-a",
+        lossless: true
+      },
+      {
+        name: "Custom Format B",
+        format: "custom-b",
+        extension: "cb",
+        mime: "application/x-custom-b",
+        from: false,
+        to: true,
+        internal: "custom-b",
+        lossless: false
+      }
+    ];
+    this.ready = true;
+  }
+
+  async doConvert(
+    inputFiles: FileData[],
+    inputFormat: FileFormat,
+    outputFormat: FileFormat,
+    args?: string[]
+  ): Promise<FileData[]> {
+    const outputFiles: FileData[] = [];
+
+    for (const file of inputFiles) {
+      // Perform conversion logic here
+      const convertedBytes = this.performConversion(file.bytes);
+      
+      outputFiles.push({
+        name: file.name.split(".")[0] + "." + outputFormat.extension,
+        bytes: convertedBytes
+      });
+    }
+
+    return outputFiles;
+  }
+
+  private performConversion(input: Uint8Array): Uint8Array {
+    // Your conversion logic
+    return new Uint8Array(input);
+  }
+}
+
+export default MyCustomHandler;
+```
+
+## ConvertPathNode
+
+Used internally for pathfinding and conversion routing:
+
+```typescript
+export class ConvertPathNode {
+  public handler: FormatHandler;
+  public format: FileFormat;
+  
+  constructor(handler: FormatHandler, format: FileFormat) {
+    this.handler = handler;
+    this.format = format;
+  }
+}
+```
+
+<ParamField path="handler" type="FormatHandler" required>
+  The format handler to use for this conversion step.
+</ParamField>
+
+<ParamField path="format" type="FileFormat" required>
+  The file format at this conversion step.
+</ParamField>
+
+## See Also
+
+- [FileFormat](/api/file-format) - Format definitions and types
+- [TraversionGraph](/api/conversion-graph) - Pathfinding algorithm for multi-step conversions

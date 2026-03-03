@@ -1,0 +1,285 @@
+---
+title: System Architecture
+description: Overview of Convert to it! architecture and core components
+---
+
+Convert to it! is built around a flexible handler system that enables conversion between a wide variety of file formats. This page explains the core architecture and how components work together.
+
+## Core Components
+
+### FormatHandler Interface
+
+The `FormatHandler` interface is the foundation of the conversion system. Each conversion tool is wrapped in a handler that implements this interface.
+
+```typescript src/FormatHandler.ts
+export interface FormatHandler {
+  /** Name of the tool being wrapped (e.g. "FFmpeg"). */
+  name: string;
+  /** List of supported input/output FileFormats. */
+  supportedFormats?: FileFormat[];
+
+  /** Whether the handler supports input of any type.
+   * Conversion using this handler will be performed only if no other direct conversion is found.
+   */
+  supportAnyInput?: boolean;
+
+  /**
+   * Whether the handler is ready for use. Should be set in init.
+   * If true, doConvert is expected to work.
+   */
+  ready: boolean;
+  /**
+   * Initializes the handler if necessary.
+   * Should set ready to true.
+   */
+  init: () => Promise<void>;
+  /**
+   * Performs the actual file conversion.
+   * @param inputFiles Array of FileData entries, one per input file.
+   * @param inputFormat Input FileFormat, the same for all inputs.
+   * @param outputFormat Output FileFormat, the same for all outputs.
+   * @param args Optional arguments as a string array.
+   * @returns Array of FileData entries, one per generated output file.
+   */
+  doConvert: (
+    inputFiles: FileData[],
+    inputFormat: FileFormat,
+    outputFormat: FileFormat,
+    args?: string[]
+  ) => Promise<FileData[]>;
+}
+```
+
+#### Key Properties
+
+<AccordionGroup>
+  <Accordion title="name">
+    A descriptive string identifying the tool or library being wrapped (e.g., "FFmpeg", "canvasToBlob").
+  </Accordion>
+  
+  <Accordion title="supportedFormats">
+    An array of `FileFormat` objects that specify which formats can be converted to/from by this handler.
+    
+    Each format includes:
+    - `from`: Whether conversion FROM this format is supported
+    - `to`: Whether conversion TO this format is supported
+    - Format metadata (name, extension, MIME type, category)
+  </Accordion>
+  
+  <Accordion title="supportAnyInput">
+    Optional flag for handlers that can accept any input format. These handlers are only used as a fallback when no direct conversion path is found.
+  </Accordion>
+  
+  <Accordion title="ready">
+    Boolean flag indicating whether the handler has completed initialization and is ready to perform conversions.
+  </Accordion>
+</AccordionGroup>
+
+### FileFormat Structure
+
+Formats define the characteristics of a file type:
+
+```typescript src/FormatHandler.ts
+export interface FileFormat extends IFormatDefinition {
+  /** Whether conversion **from** this format is supported. */
+  from: boolean;
+  /** Whether conversion **to** this format is supported. */
+  to: boolean;
+  /** Format identifier for the handler's internal reference. */
+  internal: string;
+  /** (Optional) Whether the format is lossless in this context. Defaults to false. */
+  lossless?: boolean;
+}
+```
+
+### FileData Structure
+
+File data is passed between handlers:
+
+```typescript src/FormatHandler.ts
+export interface FileData {
+  /** File name with extension. */
+  name: string;
+  /**
+   * File contents in bytes.
+   *
+   * **Please note:** handlers are responsible for ensuring the lifetime
+   * and consistency of this buffer. If you're not sure that your handler
+   * won't modify it, wrap it in `new Uint8Array()`.
+   */
+  readonly bytes: Uint8Array;
+}
+```
+
+<Warning>
+Handlers are responsible for ensuring that byte buffers do not get mutated. If necessary, clone the buffer by wrapping it in `new Uint8Array()`.
+</Warning>
+
+## TraversionGraph System
+
+The `TraversionGraph` class implements intelligent pathfinding to find optimal conversion routes between formats.
+
+### Graph Structure
+
+The graph consists of:
+
+- **Nodes**: Represent unique file formats (identified by MIME type and format)
+- **Edges**: Represent possible conversions between formats using a specific handler
+- **Costs**: Each edge has a cost based on multiple factors
+
+### Pathfinding Algorithm
+
+The system uses **Dijkstra's algorithm** to find the optimal conversion path:
+
+```typescript src/TraversionGraph.ts
+public async* searchPath(
+  from: ConvertPathNode, 
+  to: ConvertPathNode, 
+  simpleMode: boolean
+) : AsyncGenerator<ConvertPathNode[]>
+```
+
+### Cost Calculation
+
+The pathfinding considers multiple cost factors:
+
+<Tabs>
+  <Tab title="Base Costs">
+    ```typescript
+    const DEPTH_COST: number = 1; // Base cost per conversion step
+    const DEFAULT_CATEGORY_CHANGE_COST: number = 0.6; // Default category change cost
+    ```
+  </Tab>
+  
+  <Tab title="Quality Costs">
+    ```typescript
+    const LOSSY_COST_MULTIPLIER: number = 1.4; // Prefer lossless conversions
+    ```
+  </Tab>
+  
+  <Tab title="Priority Costs">
+    ```typescript
+    const HANDLER_PRIORITY_COST: number = 0.02; // Handler priority
+    const FORMAT_PRIORITY_COST: number = 0.05; // Format priority
+    ```
+  </Tab>
+</Tabs>
+
+### Category Change Costs
+
+Conversions between different media categories have specific costs:
+
+```typescript src/TraversionGraph.ts
+private categoryChangeCosts: CategoryChangeCost[] = [
+  {from: "image", to: "video", cost: 0.2}, // Almost lossless
+  {from: "video", to: "image", cost: 0.4}, // Potentially lossy
+  {from: "image", to: "audio", handler: "ffmpeg", cost: 100}, // FFmpeg can't do this
+  {from: "image", to: "audio", cost: 1.4}, // Extremely lossy
+  {from: "audio", to: "image", cost: 1}, // Very lossy
+  // ... more category costs
+];
+```
+
+<Note>
+The system can apply handler-specific category costs to avoid using tools that can't perform certain types of conversions.
+</Note>
+
+## Handler Registry
+
+All handlers are registered in `src/handlers/index.ts`:
+
+```typescript src/handlers/index.ts
+import FFmpegHandler from "./FFmpeg.ts";
+import canvasToBlobHandler from "./canvasToBlob.ts";
+// ... more imports
+
+const handlers: FormatHandler[] = [];
+try { handlers.push(new FFmpegHandler()) } catch (_) { };
+try { handlers.push(new canvasToBlobHandler()) } catch (_) { };
+// ... more handlers
+
+export default handlers;
+```
+
+<Note>
+Handlers are wrapped in try-catch blocks to ensure one failing handler doesn't break the entire system.
+</Note>
+
+## Format Definitions
+
+Common formats are defined in `src/CommonFormats.ts` using the `FormatDefinition` class:
+
+```typescript src/CommonFormats.ts
+PNG: new FormatDefinition(
+  "Portable Network Graphics",
+  "png",
+  "png",
+  "image/png",
+  Category.IMAGE
+)
+```
+
+Handlers can use these definitions with the builder pattern:
+
+```typescript
+CommonFormats.PNG.builder("png")
+  .allowFrom(true)
+  .allowTo(true)
+  .markLossless()
+```
+
+## Conversion Flow
+
+<Steps>
+  <Step title="Format Detection">
+    User uploads a file, and the system detects its format based on MIME type and extension.
+  </Step>
+  
+  <Step title="Path Search">
+    The TraversionGraph searches for the optimal conversion path from the input format to the desired output format.
+  </Step>
+  
+  <Step title="Handler Execution">
+    Each handler in the path is executed sequentially:
+    1. Handler is initialized if not ready
+    2. `doConvert()` is called with input files
+    3. Output becomes input for the next handler
+  </Step>
+  
+  <Step title="Output Delivery">
+    The final output file(s) are delivered to the user.
+  </Step>
+</Steps>
+
+## Categories
+
+File formats are organized into categories:
+
+```typescript src/CommonFormats.ts
+export const Category = {
+  DATA: "data",
+  IMAGE: "image",
+  VIDEO: "video",
+  VECTOR: "vector",
+  DOCUMENT: "document",
+  TEXT: "text",
+  AUDIO: "audio",
+  ARCHIVE: "archive",
+  SPREADSHEET: "spreadsheet",
+  PRESENTATION: "presentation",
+  FONT: "font",
+  CODE: "code"
+}
+```
+
+<Note>
+Formats can belong to multiple categories. For example, GIF is both "image" and "video".
+</Note>
+
+## Key Design Principles
+
+1. **Abstraction**: Each tool is wrapped in a standard interface
+2. **Flexibility**: Multi-step conversions enable support for indirect format pairs
+3. **Optimization**: Cost-based pathfinding prefers shorter, lossless conversion paths
+4. **Resilience**: Failed handlers don't crash the entire system
+5. **Performance**: Format caching reduces initialization time

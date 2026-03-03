@@ -1,0 +1,291 @@
+---
+title: normalizeMimeType
+description: Utility function for normalizing non-standard MIME types to their canonical forms
+---
+
+## Overview
+
+The `normalizeMimeType` function converts non-standard, vendor-specific, or legacy MIME types to their canonical, standardized forms. This ensures consistency when working with file formats across different handlers and sources.
+
+## Import
+
+```typescript
+import normalizeMimeType from "./normalizeMimeType.ts";
+```
+
+## Function Signature
+
+```typescript
+function normalizeMimeType(mime: string): string
+```
+
+<ResponseField name="mime" type="string" required>
+  The MIME type string to normalize
+</ResponseField>
+
+<ResponseField name="returns" type="string">
+  The normalized MIME type, or the original string if no normalization is needed
+</ResponseField>
+
+## Normalization Mappings
+
+The function handles the following MIME type normalizations:
+
+### Audio Formats
+
+| Non-Standard MIME Type | Canonical MIME Type | Notes |
+|------------------------|---------------------|-------|
+| `audio/x-wav` | `audio/wav` | Legacy WAV prefix |
+| `audio/vnd.wave` | `audio/wav` | Vendor-specific WAV |
+| `application/ogg` | `audio/ogg` | OGG misidentified as application |
+| `audio/x-flac` | `audio/flac` | Legacy FLAC prefix |
+| `audio/x-quicktime` | `video/quicktime` | QuickTime audio is actually video |
+| `audio/x-flo` | `audio/flo` | Legacy FLO prefix |
+| `application/x-flo` | `audio/flo` | FLO misidentified as application |
+| `video/binka` | `audio/vnd.radgamettools.bink` | Bink audio format |
+| `video/brstm` | `audio/brstm` | BRSTM misidentified as video |
+
+### Video Formats
+
+| Non-Standard MIME Type | Canonical MIME Type | Notes |
+|------------------------|---------------------|-------|
+| `video/bink` | `video/vnd.radgamettools.bink` | RAD Game Tools Bink video |
+
+### Image Formats
+
+| Non-Standard MIME Type | Canonical MIME Type | Notes |
+|------------------------|---------------------|-------|
+| `image/x-icns` | `image/icns` | macOS icon format |
+| `image/x-icon` | `image/vnd.microsoft.icon` | Windows icon format |
+| `image/vtf` | `image/x-vtf` | Valve Texture Format |
+| `image/aseprite` | `image/x-aseprite` | Aseprite sprite format |
+| `application/x-aseprite` | `image/x-aseprite` | Aseprite misidentified |
+| `image/qoi` | `image/x-qoi` | Quite OK Image format |
+
+### Archive Formats
+
+| Non-Standard MIME Type | Canonical MIME Type | Notes |
+|------------------------|---------------------|-------|
+| `application/x-gzip` | `application/gzip` | Legacy GZIP prefix |
+| `application/x-lharc` | `application/x-lzh-compressed` | LHarc archive |
+| `application/lha` | `application/x-lzh-compressed` | LHA archive |
+| `application/x-lha` | `application/x-lzh-compressed` | LHA variant |
+| `application/x-lzh` | `application/x-lzh-compressed` | LZH variant |
+
+### Font Formats
+
+| Non-Standard MIME Type | Canonical MIME Type | Notes |
+|------------------------|---------------------|-------|
+| `application/font-sfnt` | `font/ttf` | SFNT-based fonts |
+| `application/x-font-ttf` | `font/ttf` | Legacy TrueType/OpenType |
+| `application/x-font-opentype` | `font/otf` | Legacy OpenType |
+| `application/font-woff` | `font/woff` | WOFF fonts |
+| `application/x-font-woff` | `font/woff` | Legacy WOFF prefix |
+| `application/font-woff2` | `font/woff2` | WOFF2 fonts |
+| `application/x-font-woff2` | `font/woff2` | Legacy WOFF2 prefix |
+
+### Document Formats
+
+| Non-Standard MIME Type | Canonical MIME Type | Notes |
+|------------------------|---------------------|-------|
+| `application/musicxml` | `application/vnd.recordare.musicxml+xml` | MusicXML |
+| `application/musicxml+xml` | `application/vnd.recordare.musicxml+xml` | MusicXML variant |
+| `text/mathml` | `application/mathml+xml` | MathML format |
+
+### Database Formats
+
+| Non-Standard MIME Type | Canonical MIME Type | Notes |
+|------------------------|---------------------|-------|
+| `application/x-mtga` | `application/vnd.sqlite3` | Magic: The Gathering Arena DB |
+| `application/x-itunes-itdb` | `application/vnd.sqlite3` | iTunes database |
+
+## Usage Examples
+
+### Basic Usage
+
+```typescript
+import normalizeMimeType from "./normalizeMimeType.ts";
+
+// Normalize legacy audio MIME type
+const normalized = normalizeMimeType("audio/x-wav");
+console.log(normalized); // "audio/wav"
+
+// Normalize font MIME type
+const fontMime = normalizeMimeType("application/x-font-ttf");
+console.log(fontMime); // "font/ttf"
+
+// No normalization needed - returns original
+const standard = normalizeMimeType("image/png");
+console.log(standard); // "image/png"
+```
+
+### Integration with Format Detection
+
+```typescript
+import mime from "mime";
+import normalizeMimeType from "./normalizeMimeType.ts";
+
+function detectFileType(filename: string): string {
+  const detectedMime = mime.getType(filename) || "application/octet-stream";
+  return normalizeMimeType(detectedMime);
+}
+
+const type1 = detectFileType("song.wav");
+// Even if mime library returns "audio/x-wav", we get "audio/wav"
+
+const type2 = detectFileType("font.woff2");
+// Normalizes to "font/woff2" regardless of detected variant
+```
+
+### FFmpeg Handler Integration
+
+Real-world example from the FFmpeg handler (src/handlers/FFmpeg.ts:7):
+
+```typescript
+import mime from "mime";
+import normalizeMimeType from "../normalizeMimeType.ts";
+import CommonFormats from "src/CommonFormats.ts";
+
+class FFmpegHandler implements FormatHandler {
+  async init() {
+    // Get MIME types from file-type library and normalize them
+    const formats = await this.detectFormats();
+    
+    this.supportedFormats = formats.map(format => {
+      const detectedMime = mime.getType(format.extension);
+      const normalizedMime = normalizeMimeType(detectedMime || "");
+      
+      return {
+        ...format,
+        mime: normalizedMime
+      };
+    });
+  }
+}
+```
+
+### Format Comparison
+
+```typescript
+import normalizeMimeType from "./normalizeMimeType.ts";
+
+function isSameFormat(mime1: string, mime2: string): boolean {
+  return normalizeMimeType(mime1) === normalizeMimeType(mime2);
+}
+
+// These are considered the same format
+console.log(isSameFormat("audio/x-wav", "audio/wav")); // true
+console.log(isSameFormat("audio/vnd.wave", "audio/wav")); // true
+
+// These are different
+console.log(isSameFormat("audio/wav", "audio/mp3")); // false
+```
+
+### File Upload Handler
+
+```typescript
+import normalizeMimeType from "./normalizeMimeType.ts";
+
+function processUpload(file: File) {
+  // Browser-provided MIME types can vary
+  const browserMime = file.type;
+  const standardMime = normalizeMimeType(browserMime);
+  
+  // Use standardMime for consistent format handling
+  return {
+    name: file.name,
+    mime: standardMime,
+    size: file.size
+  };
+}
+```
+
+### Creating Custom Handlers with Normalized MIME
+
+```typescript
+import normalizeMimeType from "./normalizeMimeType.ts";
+import type { FileFormat, FormatHandler } from "../FormatHandler.ts";
+
+class CustomHandler implements FormatHandler {
+  name = "CustomHandler";
+  supportedFormats: FileFormat[] = [];
+  ready = false;
+
+  async init() {
+    const inputMimes = [
+      "audio/x-flac",
+      "application/x-font-woff2",
+      "image/x-icon"
+    ];
+
+    this.supportedFormats = inputMimes.map(mime => ({
+      name: "Custom Format",
+      format: "custom",
+      extension: "custom",
+      mime: normalizeMimeType(mime), // Normalized for consistency
+      internal: "custom",
+      from: true,
+      to: true,
+      lossless: false
+    }));
+    
+    this.ready = true;
+  }
+
+  async doConvert(/* ... */) {
+    // Implementation
+  }
+}
+```
+
+## Why Normalization Matters
+
+### Consistency Across Sources
+
+Different file type detection libraries, browsers, and operating systems may report different MIME types for the same format. Normalization ensures your application treats these variants consistently.
+
+### Handler Compatibility
+
+When multiple handlers support the same format, normalization ensures they all use the same MIME type identifier, making format matching and conversion routing work reliably.
+
+### Future-Proofing
+
+As MIME type standards evolve and vendor-specific types become standardized, this function provides a central place to update mappings without changing code throughout your application.
+
+## Common Pitfalls
+
+### Don't Skip Normalization
+
+```typescript
+// BAD: Direct MIME comparison without normalization
+if (file.type === "audio/wav") {
+  // Fails if file.type is "audio/x-wav" or "audio/vnd.wave"
+}
+
+// GOOD: Normalize before comparison
+if (normalizeMimeType(file.type) === "audio/wav") {
+  // Works with all WAV variants
+}
+```
+
+### Normalize External Input
+
+```typescript
+import normalizeMimeType from "./normalizeMimeType.ts";
+
+// BAD: Trust external MIME types directly
+function handleUpload(mimeType: string) {
+  return lookupHandler(mimeType); // May fail with non-standard types
+}
+
+// GOOD: Normalize first
+function handleUpload(mimeType: string) {
+  const normalized = normalizeMimeType(mimeType);
+  return lookupHandler(normalized);
+}
+```
+
+## See Also
+
+- [CommonFormats](/api/common-formats) - Pre-defined format definitions
+- [FormatHandler](/api/format-handler) - Main handler interface

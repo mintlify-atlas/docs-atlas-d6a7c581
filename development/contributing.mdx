@@ -1,0 +1,135 @@
+---
+title: Contributing
+description: How to contribute to the Convert to it! project
+---
+
+The best way to contribute to Convert to it! is by adding support for new file formats. This guide will help you understand the contribution process and guidelines.
+
+## Issue Policy
+
+Before contributing, please understand our issue guidelines to keep things organized:
+
+<Warning>
+**SIMPLY ASKING FOR A FILE FORMAT TO BE ADDED IS NOT A MEANINGFUL ISSUE!**
+
+There are thousands of file formats out there. It can take hours to add support for just one. We can't possibly support every single file, so simply listing your favorite file formats is not helpful.
+</Warning>
+
+### Suggesting a File Format
+
+When suggesting a file format, you must **at minimum**:
+
+<Steps>
+  <Step title="Check for duplicates">
+    Make sure that there isn't already an issue about the same format, and that we don't already support it.
+  </Step>
+  
+  <Step title="Explain the conversion">
+    Explain what you expect the conversion to be like (what medium is it converting to/from). It's important to note that simply parsing the underlying data is **not sufficient**.
+    
+    For example, simply treating SVG images as raw XML data without supporting conversion to raster images would defeat the point.
+  </Step>
+  
+  <Step title="Provide references">
+    Provide links to existing browser-based solutions if possible, or at the very least a reference for implementing the format. Make sure the license is compatible with GPL-2.0.
+  </Step>
+</Steps>
+
+<Note>
+If this seems like a lot, please remember - a developer will have to do 100x more work to actually implement the format. Doing a bit of research not only saves them precious time, it also weeds out "unserious" proposals that would only bloat our to-do list.
+</Note>
+
+### Bug Reports
+
+If you're submitting a bug report, you only need to check if the problem isn't already reported by someone else. Bug reports are generally quite important.
+
+<Warning>
+"Converting X to Y doesn't work" is **NOT** a bug report.
+
+However, "converting X to Y works but not how I expected" likely **IS** a bug report.
+</Warning>
+
+## Development Setup
+
+To set up Convert to it! for local development:
+
+<Steps>
+  <Step title="Clone with submodules">
+    Clone the repository **WITH SUBMODULES**. Omitting submodules will leave you missing a few dependencies.
+    
+    ```bash
+    git clone --recursive https://github.com/p2r3/convert
+    ```
+  </Step>
+  
+  <Step title="Install Bun">
+    Install [Bun](https://bun.sh/) if you haven't already.
+  </Step>
+  
+  <Step title="Install dependencies">
+    ```bash
+    bun install
+    ```
+  </Step>
+  
+  <Step title="Start development server">
+    ```bash
+    bunx vite
+    ```
+  </Step>
+</Steps>
+
+### Optional: Generate Format Cache
+
+For better performance, you can generate a format cache:
+
+<Steps>
+  <Step title="Wait for initial build">
+    When you first open the page, it'll take a while to generate the list of supported formats for each tool. Wait for the `Built initial format list` message in the console.
+  </Step>
+  
+  <Step title="Export cache data">
+    In the browser console, use `printSupportedFormatCache()` to get a JSON string with the cache data.
+  </Step>
+  
+  <Step title="Save to file">
+    Save this string to `cache.json` to skip that loading screen on startup.
+  </Step>
+</Steps>
+
+## Contribution Guidelines
+
+### Format Support Philosophy
+
+When implementing a new file format, please treat the file as the media that it represents, not the data that it contains.
+
+<Note>
+**Example:** If you were making an SVG handler, you should treat the file as an **image**, not as XML.
+</Note>
+
+### Code Quality
+
+- Follow the existing code style and patterns
+- Use TypeScript for type safety
+- Add appropriate error handling
+- Test your handler with various input files
+
+### Pull Request Process
+
+1. Create a new branch for your feature
+2. Implement your changes following the handler creation guide
+3. Test thoroughly with multiple file variations
+4. Submit a pull request with a clear description of:
+   - What format(s) you're adding
+   - How the conversion works
+   - Any limitations or known issues
+   - Links to format specifications or references used
+
+## Getting Help
+
+For questions or discussions:
+
+- Review existing handlers in `src/handlers/` for examples
+- Check the [Architecture](/development/architecture) page for system overview
+- See [Creating Handlers](/development/creating-handlers) for step-by-step guide
+- Open a GitHub issue for specific problems (following the guidelines above)

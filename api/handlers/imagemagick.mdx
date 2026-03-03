@@ -1,0 +1,298 @@
+---
+title: "ImageMagickHandler"
+description: "Image conversion handler using ImageMagick WASM"
+---
+
+## Overview
+
+The `ImageMagickHandler` provides image format conversion capabilities using ImageMagick compiled to WebAssembly. It supports a wide range of image formats and handles batch conversions efficiently.
+
+## Supported Formats
+
+ImageMagickHandler discovers formats from ImageMagick's `supportedFormats` list. Common formats include:
+
+### Raster Formats
+- **PNG** - Portable Network Graphics
+- **JPEG** - Joint Photographic Experts Group
+- **GIF** - Graphics Interchange Format
+- **WebP** - Web Picture format
+- **BMP** - Windows Bitmap
+- **TIFF** - Tagged Image File Format
+- **ICO** - Microsoft Windows ICO
+
+### Vector & Other Formats
+- **PDF** - Portable Document Format (write-only)
+- **MPO** - Multi-Picture Object
+- **VST** - Microsoft Visio Template
+
+### Filtered Formats
+
+The handler excludes certain formats that are better handled by other handlers:
+
+```typescript
+// Excluded formats
+- APNG - Handled by FFmpegHandler
+- SVG - Handled by canvasToBlobHandler
+- TTF, OTF - Font formats
+- Text-based formats
+- Video formats
+- JSON files
+```
+
+## Initialization
+
+The handler loads ImageMagick WASM and discovers supported formats:
+
+```typescript
+const handler = new ImageMagickHandler();
+await handler.init();
+```
+
+### Initialization Process
+
+1. Fetches ImageMagick WASM from `/convert/wasm/magick.wasm`
+2. Converts to Uint8Array
+3. Initializes ImageMagick with WASM bytes
+4. Iterates through `Magick.supportedFormats`
+5. Filters and normalizes format metadata
+6. Applies custom descriptions for common formats
+7. Prioritizes formats (PDF, GIF, JPEG, PNG)
+
+```typescript
+const wasmLocation = "/convert/wasm/magick.wasm";
+const wasmBuffer = await fetch(wasmLocation).then(r => r.arrayBuffer());
+const wasmBytes = new Uint8Array(wasmBuffer);
+await initializeImageMagick(wasmBytes);
+```
+
+### Format Filtering
+
+Formats are filtered based on MIME type validity:
+
+```typescript
+let mimeType = format.mimeType || mime.getType(formatName);
+if (
+  !mimeType
+  || mimeType.startsWith("text/")
+  || mimeType.startsWith("video/")
+  || mimeType === "application/json"
+) return; // Skip this format
+```
+
+### Custom Format Descriptions
+
+Common formats receive standardized descriptions:
+
+```typescript
+if (mimeType === "image/jpeg") description = "Joint Photographic Experts Group";
+if (mimeType === "image/gif") description = "Graphics Interchange Format";
+if (mimeType === "image/webp") description = "Web Picture format";
+if (formatName === "ico") description = "Microsoft Windows ICO";
+if (formatName === "mpo") description = "Multi-Picture Object";
+if (formatName === "vst") description = "Microsoft Visio Template";
+```
+
+## Format Prioritization
+
+Formats are sorted to prioritize common formats:
+
+```typescript
+const prioritize = ["png", "jpeg", "gif", "pdf"];
+prioritize.reverse();
+
+this.supportedFormats.sort((a, b) => {
+  const priorityIndexA = prioritize.indexOf(a.format);
+  const priorityIndexB = prioritize.indexOf(b.format);
+  return priorityIndexB - priorityIndexA;
+});
+```
+
+Result order: PDF → GIF → JPEG → PNG → others
+
+## Conversion Process
+
+### Basic Conversion
+
+```typescript
+const outputFiles = await handler.doConvert(
+  inputFiles,
+  inputFormat,
+  outputFormat
+);
+```
+
+### Multi-Image Handling
+
+ImageMagickHandler uses `MagickImageCollection` to handle multiple input files:
+
+```typescript
+MagickImageCollection.use(outputCollection => {
+  for (const inputFile of inputFiles) {
+    MagickImageCollection.use(fileCollection => {
+      fileCollection.read(inputFile.bytes, inputSettings);
+      while (fileCollection.length > 0) {
+        const image = fileCollection.shift();
+        if (!image) break;
+        outputCollection.push(image);
+      }
+    });
+  }
+  outputCollection.write(outputMagickFormat, (bytes) => {
+    resolve(new Uint8Array(bytes));
+  });
+});
+```
+
+This allows batch conversions and multi-frame format support (GIF, TIFF, etc.).
+
+## Special Format Handling
+
+### RGB Format
+
+<ParamField path="RGB" type="input format">
+  Raw RGB data requires dimension estimation:
+  ```typescript
+  if (inputFormat.format == "rgb") {
+    // Guess image dimensions from file size
+    inputSettings.width = Math.sqrt(inputFile.bytes.length / 3);
+    inputSettings.height = inputSettings.width;
+  }
+  ```
+</ParamField>
+
+### ICO Format
+
+<ParamField path="ICO" type="output format">
+  Windows ICO files are limited to 256×256 pixels:
+  ```typescript
+  if (outputFormat.format == "ico" && (image.width > 256 || image.height > 256)) {
+    const geometry = new MagickGeometry(256, 256);
+    image.resize(geometry);
+  }
+  ```
+</ParamField>
+
+### PDF Reading
+
+PDF is supported for writing but not reading:
+
+```typescript
+from: mimeType === "application/pdf" ? false : format.supportsReading,
+to: format.supportsWriting,
+```
+
+## Read Settings
+
+Input formats are configured using `MagickReadSettings`:
+
+```typescript
+const inputSettings = new MagickReadSettings();
+inputSettings.format = inputMagickFormat;
+
+// For RGB format, set dimensions
+inputSettings.width = calculatedWidth;
+inputSettings.height = calculatedHeight;
+```
+
+## Format Metadata
+
+Each supported format includes:
+
+<ParamField path="name" type="string">
+  Human-readable format name (e.g., "Joint Photographic Experts Group")
+</ParamField>
+
+<ParamField path="format" type="string">
+  Normalized format identifier (e.g., "jpeg", "png")
+</ParamField>
+
+<ParamField path="extension" type="string">
+  File extension (e.g., "jpg", "png")
+</ParamField>
+
+<ParamField path="mime" type="string">
+  Normalized MIME type (e.g., "image/jpeg")
+</ParamField>
+
+<ParamField path="from" type="boolean">
+  Whether the format can be read (input)
+</ParamField>
+
+<ParamField path="to" type="boolean">
+  Whether the format can be written (output)
+</ParamField>
+
+<ParamField path="internal" type="MagickFormat">
+  ImageMagick's internal format identifier
+</ParamField>
+
+<ParamField path="category" type="string">
+  Format category extracted from MIME type (e.g., "image")
+</ParamField>
+
+<ParamField path="lossless" type="boolean">
+  `true` for PNG, BMP, TIFF; `false` for others
+</ParamField>
+
+## Output File Naming
+
+Output files preserve the input filename with updated extension:
+
+```typescript
+const baseName = inputFiles[0].name.split(".")[0];
+const name = baseName + "." + outputFormat.extension;
+return [{ bytes, name }];
+```
+
+## Format Normalization
+
+JPEG format normalization:
+
+```typescript
+format: formatName === "jpg" ? "jpeg" : formatName,
+```
+
+Ensures "jpg" is normalized to "jpeg" for consistency.
+
+## Lossless Detection
+
+The handler identifies lossless formats:
+
+```typescript
+lossless: ["png", "bmp", "tiff"].includes(formatName)
+```
+
+This helps users choose appropriate formats for quality preservation.
+
+## Properties
+
+<ParamField path="name" type="string" default="ImageMagick">
+  Handler identifier
+</ParamField>
+
+<ParamField path="supportedFormats" type="FileFormat[]">
+  Array of supported formats populated during initialization
+</ParamField>
+
+<ParamField path="ready" type="boolean">
+  `true` when initialization is complete and handler is ready for conversions
+</ParamField>
+
+## Error Handling
+
+The handler throws errors for:
+- Uninitialized handler usage
+- Invalid format conversions
+- WASM loading failures
+- Image processing errors
+
+## Performance Considerations
+
+- Uses ImageMagick WASM for in-browser processing
+- Processes files in batches efficiently
+- Automatically manages memory with `MagickImageCollection.use()` resource scoping
+- Suitable for client-side image conversions without server roundtrips
+
+## Source Reference
+
+Implementation: `~/workspace/source/src/handlers/ImageMagick.ts`

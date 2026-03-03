@@ -1,0 +1,136 @@
+---
+title: Local Development
+description: Set up a local development environment for Convert to it!
+---
+
+This guide will help you set up Convert to it! for local development using Bun and Vite.
+
+## Prerequisites
+
+Before you begin, make sure you have:
+
+- Git installed on your system
+- [Bun](https://bun.sh/) runtime installed
+- A terminal or command prompt
+
+## Installation
+
+<Steps>
+  <Step title="Clone the repository with submodules">
+    The project uses Git submodules for some dependencies. Clone the repository with the `--recursive` flag:
+
+    <CodeGroup>
+      ```bash HTTPS
+      git clone --recursive https://github.com/p2r3/convert
+      ```
+
+      ```bash SSH
+      git clone --recursive git@github.com:p2r3/convert.git
+      ```
+    </CodeGroup>
+
+    <Warning>
+      **Do not omit the `--recursive` flag!** Submodules contain required dependencies. Without them, the project will not work properly.
+    </Warning>
+
+    If you already cloned without submodules, initialize them:
+
+    ```bash
+    git submodule update --init --recursive
+    ```
+  </Step>
+
+  <Step title="Install Bun">
+    If you haven't already, install [Bun](https://bun.sh/):
+
+    <CodeGroup>
+      ```bash macOS/Linux
+      curl -fsSL https://bun.sh/install | bash
+      ```
+
+      ```powershell Windows
+      powershell -c "irm bun.sh/install.ps1 | iex"
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Install dependencies">
+    Navigate to the project directory and install dependencies:
+
+    ```bash
+    cd convert
+    bun install
+    ```
+  </Step>
+
+  <Step title="Start the development server">
+    Launch the Vite development server:
+
+    ```bash
+    bun run dev
+    ```
+
+    The application will be available at `http://localhost:5173/convert/`
+  </Step>
+</Steps>
+
+## Optimizing Performance (Optional)
+
+When you first open the application, it takes time to generate the list of supported formats for each conversion tool. You'll see warnings in the browser console about missing caches.
+
+<Steps>
+  <Step title="Generate initial cache">
+    Open the application and wait for the format list to build. You'll see a message in the console:
+
+    ```
+    Built initial format list
+    ```
+  </Step>
+
+  <Step title="Export cache data">
+    Open the browser console and run:
+
+    ```javascript
+    printSupportedFormatCache()
+    ```
+
+    This will output a JSON string with the cache data.
+  </Step>
+
+  <Step title="Save to cache.json">
+    Copy the JSON output and save it to a file named `cache.json` in your project root.
+
+    On subsequent starts, the application will use this cache to skip the loading screen.
+  </Step>
+</Steps>
+
+<Note>
+  The cache optimization is recommended but not required. It significantly improves startup time by avoiding regeneration of format support data.
+</Note>
+
+## Available Scripts
+
+Here are the key development scripts from `package.json`:
+
+| Script | Command | Description |
+|--------|---------|-------------|
+| **dev** | `bun run dev` | Start Vite development server |
+| **build** | `bun run build` | Build for production |
+| **preview** | `bun run preview` | Preview production build locally |
+| **cache:build** | `bun run cache:build` | Build minified cache file |
+| **cache:build:dev** | `bun run cache:build:dev` | Build cache file (non-minified) |
+
+## Project Structure
+
+The main directories you'll work with:
+
+- `src/` - Application source code
+- `src/handlers/` - File format conversion handlers
+- `dist/` - Build output directory
+- `docker/` - Docker configuration files
+
+## Next Steps
+
+- Learn about [Docker deployment](/deployment/docker)
+- Build the [desktop application](/deployment/desktop-app)
+- Read the [contributing guide](https://github.com/p2r3/convert#contributing) to add new file format handlers

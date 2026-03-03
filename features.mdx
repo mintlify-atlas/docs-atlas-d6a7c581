@@ -1,0 +1,187 @@
+---
+title: Features
+description: What makes Convert to it! the most versatile file converter
+---
+
+# Features
+
+Convert to it! stands out from traditional online converters with its unique approach to file conversion.
+
+## Core Features
+
+### Offline-First Architecture
+
+All conversions happen **entirely in your browser** using WebAssembly. Your files never touch a server.
+
+<Info>
+  **Privacy guaranteed:** Since everything runs client-side, your sensitive files remain completely private. No uploads, no storage, no tracking.
+</Info>
+
+### Cross-Medium Conversion
+
+Unlike traditional converters that restrict you to converting within the same media type, Convert to it! breaks these boundaries:
+
+- Convert **images** to **audio** (extract color data as waveforms)
+- Convert **videos** to **documents** (frame extraction to PDF)
+- Convert **fonts** to **images** (render glyphs)
+- Convert **3D models** to **images** (render scenes)
+- And thousands of other unusual combinations
+
+### Intelligent Format Detection
+
+Drop any file and Convert to it! automatically detects its format using:
+- MIME type analysis
+- File extension matching
+- Binary signature detection
+
+### Advanced Conversion Paths
+
+The tool uses a graph-based traversal algorithm to find conversion paths between formats, even when no direct converter exists:
+
+```typescript
+// From src/FormatHandler.ts
+export class ConvertPathNode {
+  public handler: FormatHandler;
+  public format: FileFormat;
+  constructor(handler: FormatHandler, format: FileFormat) {
+    this.handler = handler;
+    this.format = format;
+  }
+}
+```
+
+This means if you want to convert from Format A to Format C, but only A→B and B→C converters exist, Convert to it! will automatically chain them together.
+
+## Supported Format Categories
+
+Convert to it! supports formats across multiple categories:
+
+<CardGroup cols={2}>
+  <Card title="Images" icon="image">
+    PNG, JPEG, WebP, TIFF, BMP, GIF, SVG, and many specialized formats
+  </Card>
+  <Card title="Videos" icon="video">
+    MP4, AVI, WebM, MOV, and more via FFmpeg
+  </Card>
+  <Card title="Audio" icon="music">
+    MP3, WAV, OGG, FLAC, MIDI, and tracker formats
+  </Card>
+  <Card title="Documents" icon="file-lines">
+    PDF, DOCX, XLSX, PPTX, HTML, Markdown
+  </Card>
+  <Card title="Data Formats" icon="database">
+    JSON, XML, YAML, CSV, BSON, SQLite
+  </Card>
+  <Card title="Archives" icon="file-zipper">
+    ZIP, and various game/specialized archives
+  </Card>
+  <Card title="Fonts" icon="font">
+    TTF, OTF, WOFF, WOFF2
+  </Card>
+  <Card title="Code" icon="code">
+    Python, Shell scripts, Batch files, and more
+  </Card>
+</CardGroup>
+
+## Conversion Handlers
+
+Convert to it! uses specialized handlers for different conversion tasks:
+
+### FFmpeg Handler
+Handles most video and audio conversions using FFmpeg compiled to WebAssembly.
+
+### ImageMagick Handler  
+Processes raster images with ImageMagick's powerful manipulation capabilities.
+
+### Specialized Handlers
+
+The tool includes 60+ specialized handlers for niche formats:
+
+- **Game formats**: Minecraft schematics, Terraria worlds, Doom WAD files
+- **Music notation**: MusicXML, MIDI with Verovio rendering
+- **3D formats**: STL, OBJ via Three.js
+- **Archive formats**: ZIP, LZH
+- **Font rendering**: TTF/OTF to images
+- And many more!
+
+## User Interface Features
+
+### Simple Mode
+Drag, drop, select output format, and convert. Perfect for quick conversions.
+
+### Advanced Mode  
+Access additional options and settings for power users.
+
+### Format Search
+Quickly find formats with built-in search:
+
+```html
+<!-- From index.html -->
+<input type="text" id="search-from" class="search" placeholder="Search">
+<input type="text" id="search-to" class="search" placeholder="Search">
+```
+
+### Batch Processing
+Convert multiple files at once with the same settings.
+
+## Technical Features
+
+### Format Handler API
+
+Extensible architecture makes it easy to add new formats:
+
+```typescript
+// From src/FormatHandler.ts
+export interface FormatHandler {
+  name: string;
+  supportedFormats?: FileFormat[];
+  ready: boolean;
+  init: () => Promise<void>;
+  doConvert: (
+    inputFiles: FileData[],
+    inputFormat: FileFormat,
+    outputFormat: FileFormat,
+    args?: string[]
+  ) => Promise<FileData[]>;
+}
+```
+
+### Common Format Definitions
+
+Reusable format definitions reduce code duplication:
+
+```typescript
+// From src/CommonFormats.ts
+PNG: new FormatDefinition(
+  "Portable Network Graphics",
+  "png",
+  "png",
+  "image/png",
+  Category.IMAGE
+)
+```
+
+### Category System
+
+Formats are organized into logical categories:
+
+```typescript
+export const Category = {
+  DATA: "data",
+  IMAGE: "image",
+  VIDEO: "video",
+  VECTOR: "vector",
+  DOCUMENT: "document",
+  TEXT: "text",
+  AUDIO: "audio",
+  ARCHIVE: "archive",
+  SPREADSHEET: "spreadsheet",
+  PRESENTATION: "presentation",
+  FONT: "font",
+  CODE: "code"
+}
+```
+
+## Open Source
+
+Convert to it! is licensed under GPL-2.0 and available on [GitHub](https://github.com/p2r3/convert). Contributions are welcome following the project's contribution guidelines.

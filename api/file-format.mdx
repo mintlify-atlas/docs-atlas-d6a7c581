@@ -1,0 +1,321 @@
+---
+title: 'FileFormat & FormatDefinition'
+description: 'Type definitions for file format specifications'
+icon: 'file'
+---
+
+File format types define the metadata and capabilities of supported formats in the conversion system.
+
+## FileFormat Interface
+
+Extends `IFormatDefinition` with conversion capabilities:
+
+```typescript
+export interface FileFormat extends IFormatDefinition {
+  /** Whether conversion **from** this format is supported. */
+  from: boolean;
+  /** Whether conversion **to** this format is supported. */
+  to: boolean;
+  /** Format identifier for the handler's internal reference. */
+  internal: string;
+  /** (Optional) Whether the format is lossless in this context. Defaults to `false`. */
+  lossless?: boolean;
+}
+```
+
+<ParamField path="from" type="boolean" required>
+  Whether conversion **from** this format is supported.
+  
+  Set to `true` if this handler can read and convert files in this format.
+</ParamField>
+
+<ParamField path="to" type="boolean" required>
+  Whether conversion **to** this format is supported.
+  
+  Set to `true` if this handler can produce output files in this format.
+</ParamField>
+
+<ParamField path="internal" type="string" required>
+  Format identifier for the handler's internal reference.
+  
+  Used to identify the format within the handler's conversion logic. This can be different from the `format` field for disambiguation.
+</ParamField>
+
+<ParamField path="lossless" type="boolean" default={false}>
+  Whether the format is lossless in this context.
+  
+  This affects pathfinding cost calculations. Lossy conversions receive a cost multiplier of 1.4x.
+</ParamField>
+
+## IFormatDefinition Interface
+
+Base interface containing format metadata:
+
+```typescript
+export interface IFormatDefinition {
+  /** Format description (long name) for displaying to the user. */
+  name: string;
+  /** Short, "formal" name for displaying to the user, and for
+   * differentiating between files of identical MIME types.
+   * If your file is different from others of the same MIME type,
+   * then this string should be used to differentiate it. */
+  format: string;
+  /** File extension. */
+  extension: string;
+  /** MIME type. */
+  mime: string;
+  /** Category for grouping formats. */
+  category?: Array<string> | string;
+}
+```
+
+<ParamField path="name" type="string" required>
+  Format description (long name) for displaying to the user.
+  
+  Example: `"Minecraft Schematic"`, `"MPEG-4 Audio"`
+</ParamField>
+
+<ParamField path="format" type="string" required>
+  Short, "formal" name for displaying to the user, and for differentiating between files of identical MIME types.
+  
+  If your file is different from others of the same MIME type, this string should be used to differentiate it.
+  
+  Example: `"schematic"`, `"mp4"`, `"litematic"`
+</ParamField>
+
+<ParamField path="extension" type="string" required>
+  File extension without the leading dot.
+  
+  Example: `"schematic"`, `"mp4"`, `"png"`
+</ParamField>
+
+<ParamField path="mime" type="string" required>
+  MIME type of the format.
+  
+  Example: `"application/x-minecraft-schematic"`, `"video/mp4"`, `"image/png"`
+</ParamField>
+
+<ParamField path="category" type="string | string[]">
+  Category for grouping formats.
+  
+  Can be a single category or an array of categories. Used by the pathfinding algorithm to apply category change costs.
+  
+  Common categories: `"image"`, `"video"`, `"audio"`, `"text"`, `"document"`, `"data"`
+</ParamField>
+
+## FormatDefinition Class
+
+Utility class for creating `FileFormat` objects with a fluent builder API:
+
+```typescript
+export class FormatDefinition implements IFormatDefinition {
+  public readonly name: string;
+  public readonly format: string;
+  public readonly extension: string;
+  public readonly mime: string;
+  public readonly category?: string[] | string;
+
+  constructor(
+    name: string,
+    format: string,
+    extension: string,
+    mime: string,
+    category?: string[] | string
+  )
+}
+```
+
+### Methods
+
+<ResponseField name="supported" type="(ref: string, from: boolean, to: boolean, lossless?: boolean, override?: Partial<IFormatDefinition>) => FileFormat">
+  Returns a `FileFormat` object that uses this format definition and specified options.
+  
+  <Expandable title="Parameters">
+    <ParamField path="ref" type="string" required>
+      Format identifier for the handler's internal reference.
+    </ParamField>
+    
+    <ParamField path="from" type="boolean" required>
+      Whether conversion **from** this format is supported.
+    </ParamField>
+    
+    <ParamField path="to" type="boolean" required>
+      Whether conversion **to** this format is supported.
+    </ParamField>
+    
+    <ParamField path="lossless" type="boolean" default={false}>
+      Whether the format is lossless in this context.
+    </ParamField>
+    
+    <ParamField path="override" type="Partial<IFormatDefinition>" default={{}}>
+      Format definition values to override.
+    </ParamField>
+  </Expandable>
+  
+  **Example:**
+  ```typescript
+  const pngFormat = new FormatDefinition(
+    "Portable Network Graphics",
+    "png",
+    "png",
+    "image/png",
+    "image"
+  );
+  
+  const fileFormat = pngFormat.supported("png", true, true, true);
+  ```
+</ResponseField>
+
+<ResponseField name="builder" type="(ref: string) => FileFormat & Builder">
+  Returns a builder to fluently create `FileFormat`.
+  
+  <Expandable title="Builder Methods">
+    <ResponseField name="allowFrom" type="(value?: boolean) => this">
+      Set whether conversion from this format is supported. Defaults to `true` if no value provided.
+    </ResponseField>
+    
+    <ResponseField name="allowTo" type="(value?: boolean) => this">
+      Set whether conversion to this format is supported. Defaults to `true` if no value provided.
+    </ResponseField>
+    
+    <ResponseField name="markLossless" type="(value?: boolean) => this">
+      Set whether the format is lossless. Defaults to `true` if no value provided.
+    </ResponseField>
+    
+    <ResponseField name="named" type="(name: string) => this">
+      Override the format name.
+    </ResponseField>
+    
+    <ResponseField name="withFormat" type="(format: string) => this">
+      Override the format identifier.
+    </ResponseField>
+    
+    <ResponseField name="withExt" type="(ext: string) => this">
+      Override the file extension.
+    </ResponseField>
+    
+    <ResponseField name="withMime" type="(mimetype: string) => this">
+      Override the MIME type.
+    </ResponseField>
+    
+    <ResponseField name="withCategory" type="(category: string[] | string | undefined) => this">
+      Replace the format category.
+    </ResponseField>
+    
+    <ResponseField name="override" type="(values: Partial<IFormatDefinition>) => this">
+      Override multiple format definition values at once.
+    </ResponseField>
+  </Expandable>
+  
+  **Example:**
+  ```typescript
+  const pngFormat = new FormatDefinition(
+    "Portable Network Graphics",
+    "png",
+    "png",
+    "image/png",
+    "image"
+  );
+  
+  const fileFormat = pngFormat.builder("png")
+    .allowFrom()
+    .allowTo()
+    .markLossless();
+  ```
+</ResponseField>
+
+## Usage Examples
+
+### Creating FileFormat Objects
+
+<CodeGroup>
+```typescript Direct Object
+const format: FileFormat = {
+  name: "Minecraft Schematic",
+  format: "schematic",
+  extension: "schematic",
+  mime: "application/x-minecraft-schematic",
+  from: true,
+  to: true,
+  internal: "schematic",
+  category: "data",
+  lossless: true
+};
+```
+
+```typescript Using supported() Method
+const schemDef = new FormatDefinition(
+  "Minecraft Schematic",
+  "schematic",
+  "schematic",
+  "application/x-minecraft-schematic",
+  "data"
+);
+
+const format = schemDef.supported("schematic", true, true, true);
+```
+
+```typescript Using Builder Pattern
+const schemDef = new FormatDefinition(
+  "Minecraft Schematic",
+  "schematic",
+  "schematic",
+  "application/x-minecraft-schematic",
+  "data"
+);
+
+const format = schemDef.builder("schematic")
+  .allowFrom()
+  .allowTo()
+  .markLossless();
+```
+</CodeGroup>
+
+### Handler Implementation
+
+```typescript
+class MyHandler implements FormatHandler {
+  public name = "MyHandler";
+  public supportedFormats?: FileFormat[];
+  public ready = false;
+
+  async init() {
+    const pngDef = new FormatDefinition(
+      "Portable Network Graphics",
+      "png",
+      "png",
+      "image/png",
+      "image"
+    );
+    
+    const jpegDef = new FormatDefinition(
+      "JPEG Image",
+      "jpeg",
+      "jpg",
+      "image/jpeg",
+      "image"
+    );
+
+    this.supportedFormats = [
+      pngDef.builder("png").allowFrom().allowTo().markLossless(),
+      jpegDef.builder("jpeg").allowFrom().allowTo()
+    ];
+    
+    this.ready = true;
+  }
+
+  async doConvert(
+    inputFiles: FileData[],
+    inputFormat: FileFormat,
+    outputFormat: FileFormat
+  ): Promise<FileData[]> {
+    // Conversion logic using inputFormat.internal and outputFormat.internal
+    return [];
+  }
+}
+```
+
+## See Also
+
+- [FormatHandler](/api/format-handler) - Handler interface for conversions
+- [TraversionGraph](/api/conversion-graph) - Uses format categories for pathfinding

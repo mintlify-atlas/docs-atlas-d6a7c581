@@ -1,0 +1,277 @@
+---
+title: Desktop Application
+description: Build and distribute the Convert to it! desktop application using Electron
+---
+
+Convert to it! can be packaged as a desktop application for Windows, macOS, and Linux using Electron. This allows users to run the converter offline without a browser.
+
+## Prerequisites
+
+Before building the desktop app, ensure you have:
+
+- [Bun](https://bun.sh/) runtime installed
+- Repository cloned with submodules (see [local development](/deployment/local-development))
+- Dependencies installed (`bun install`)
+
+## Build Configuration
+
+The desktop build is configured in `package.json` using electron-builder:
+
+```json
+{
+  "main": "src/electron.cjs",
+  "build": {
+    "appId": "com.p2r3.convert",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "src/electron.cjs"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}
+```
+
+## Building for All Platforms
+
+### Windows
+
+Build an NSIS installer for Windows:
+
+<Steps>
+  <Step title="Run the Windows build script">
+    ```bash
+    bun run desktop:dist:win
+    ```
+
+    This command:
+    1. Compiles TypeScript (`tsc`)
+    2. Builds the app with Vite in desktop mode (`IS_DESKTOP=true vite build`)
+    3. Generates the format cache (`bun run cache:build`)
+    4. Packages with electron-builder for Windows
+  </Step>
+
+  <Step title="Find the installer">
+    The Windows installer will be created in the `release/` directory:
+
+    ```
+    release/Convert to it! Setup <version>.exe
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  On non-Windows systems, you may need Wine installed to build Windows targets.
+</Note>
+
+### macOS
+
+Build a DMG installer for macOS:
+
+<Steps>
+  <Step title="Run the macOS build script">
+    ```bash
+    bun run desktop:dist:mac
+    ```
+
+    This creates a DMG disk image for macOS distribution.
+  </Step>
+
+  <Step title="Find the installer">
+    The DMG file will be in the `release/` directory:
+
+    ```
+    release/Convert to it!-<version>.dmg
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+  Building for macOS typically requires running on a Mac due to code signing and notarization requirements.
+</Warning>
+
+### Linux
+
+Build an AppImage for Linux:
+
+<Steps>
+  <Step title="Run the Linux build script">
+    ```bash
+    bun run desktop:dist:linux
+    ```
+
+    This creates a portable AppImage file.
+  </Step>
+
+  <Step title="Find the AppImage">
+    The AppImage will be in the `release/` directory:
+
+    ```
+    release/Convert to it!-<version>.AppImage
+    ```
+  </Step>
+</Steps>
+
+## Development Workflow
+
+For testing the desktop app during development:
+
+<Steps>
+  <Step title="Build the desktop app">
+    ```bash
+    bun run desktop:build
+    ```
+
+    This compiles the application and generates the cache without packaging.
+  </Step>
+
+  <Step title="Preview with Electron">
+    ```bash
+    bun run desktop:preview
+    ```
+
+    This launches the app in Electron for testing.
+  </Step>
+
+  <Step title="Build and preview in one command">
+    ```bash
+    bun run desktop:start
+    ```
+
+    Combines both build and preview steps.
+  </Step>
+</Steps>
+
+## Available Scripts
+
+Here are all desktop-related scripts from `package.json`:
+
+| Script | Command | Description |
+|--------|---------|-------------|
+| **desktop:build** | `bun run desktop:build` | Build app with TypeScript, Vite, and cache generation |
+| **desktop:preview** | `bun run desktop:preview` | Launch built app in Electron |
+| **desktop:start** | `bun run desktop:start` | Build and preview in one command |
+| **desktop:dist:win** | `bun run desktop:dist:win` | Package Windows installer (NSIS) |
+| **desktop:dist:mac** | `bun run desktop:dist:mac` | Package macOS installer (DMG) |
+| **desktop:dist:linux** | `bun run desktop:dist:linux` | Package Linux installer (AppImage) |
+
+## Environment Variables
+
+The desktop build uses a special environment variable:
+
+- `IS_DESKTOP=true` - Tells Vite to build in desktop mode
+
+This is automatically set by the desktop build scripts.
+
+## Output Directory Structure
+
+After building, your project will have:
+
+```
+convert/
+├── dist/               # Vite build output
+│   ├── cache.json     # Format support cache
+│   └── ...
+├── release/           # electron-builder output
+│   ├── Convert to it!-<version>.dmg          # macOS
+│   ├── Convert to it! Setup <version>.exe    # Windows
+│   └── Convert to it!-<version>.AppImage     # Linux
+└── src/
+    └── electron.cjs   # Electron main process
+```
+
+## Distribution
+
+### Code Signing
+
+For production releases, you should sign your applications:
+
+**Windows:**
+- Use a code signing certificate
+- Configure in `package.json` under `win.certificateFile`
+
+**macOS:**
+- Requires Apple Developer account
+- Configure signing identity in `package.json` under `mac.identity`
+- Notarization recommended for macOS 10.15+
+
+**Linux:**
+- AppImages don't require signing but can be verified
+
+### Auto-Updates
+
+To enable auto-updates, configure electron-builder's publish options:
+
+```json
+{
+  "build": {
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "p2r3",
+        "repo": "convert"
+      }
+    ]
+  }
+}
+```
+
+Then build with the `--publish` flag:
+
+```bash
+bun run desktop:build && electron-builder --mac --publish always
+```
+
+<Note>
+  The default scripts use `--publish never` to prevent accidental releases.
+</Note>
+
+## Troubleshooting
+
+### Build fails on TypeScript compilation
+
+Make sure all dependencies are installed:
+
+```bash
+bun install
+```
+
+### Cache generation fails
+
+Ensure Chromium dependencies are available (needed for Puppeteer in `buildCache.js`):
+
+```bash
+# On Debian/Ubuntu
+sudo apt-get install -y chromium-browser
+
+# On macOS
+brew install chromium
+```
+
+### AppImage won't run on Linux
+
+Make the AppImage executable:
+
+```bash
+chmod +x "release/Convert to it!-*.AppImage"
+```
+
+### Large bundle size
+
+The desktop app includes all conversion tools and their dependencies (FFmpeg, ImageMagick WASM, etc.), resulting in a large bundle. This is expected and necessary for offline functionality.
+
+## Next Steps
+
+- Set up [local development](/deployment/local-development) environment
+- Deploy using [Docker](/deployment/docker)
+- Learn about [adding file format handlers](https://github.com/p2r3/convert#contributing)
