@@ -1,0 +1,101 @@
+{
+  "projectType": "saas",
+  "projectName": "Convert to it!",
+  "projectDescription": "Truly universal browser-based file converter supporting 100+ formats across all media types",
+  "theme": "palm",
+  "primaryColor": "#3B82F6",
+  "lightColor": "#60A5FA",
+  "darkColor": "#2563EB",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "features",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Usage",
+            "pages": [
+              "usage/using-converter",
+              "usage/supported-formats",
+              "usage/troubleshooting"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "deployment/local-development",
+              "deployment/docker",
+              "deployment/desktop-app"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "development/contributing",
+              "development/architecture",
+              "development/creating-handlers",
+              "development/adding-dependencies"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "api/format-handler",
+              "api/file-format",
+              "api/conversion-graph"
+            ]
+          },
+          {
+            "group": "Major Handlers",
+            "pages": [
+              "api/handlers/ffmpeg",
+              "api/handlers/imagemagick",
+              "api/handlers/pandoc",
+              "api/handlers/canvas-to-blob"
+            ]
+          },
+          {
+            "group": "Utilities",
+            "pages": [
+              "api/common-formats",
+              "api/mime-types"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Universal file conversion across all media types (images, videos, audio, documents, code, archives, etc.)",
+    "100% browser-based with client-side processing for privacy",
+    "60+ format handlers using WebAssembly (FFmpeg, ImageMagick, Pandoc, SQLite, etc.)",
+    "Intelligent conversion path finding between formats",
+    "Support for both simple and advanced conversion modes",
+    "Cross-platform: web, Docker, and Electron desktop versions",
+    "Extensible architecture for adding new format handlers"
+  ],
+  "publicApiSurface": [
+    "FormatHandler interface - Base interface for all conversion handlers",
+    "FileFormat type - Format definition with metadata",
+    "FileData type - File data wrapper for conversions",
+    "CommonFormats - Predefined format definitions (PNG, JPEG, MP4, PDF, etc.)",
+    "normalizeMimeType() - MIME type normalization utility",
+    "TraversionGraph - Conversion path finding algorithm",
+    "FFmpegHandler - Audio/video conversion handler",
+    "ImageMagickHandler - Image conversion handler",
+    "PandocHandler - Document conversion handler",
+    "canvasToBlobHandler - Canvas-based image handler"
+  ]
+}
